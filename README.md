@@ -9,9 +9,6 @@
 - 按歌名搜索 Jellyfin 音乐库。
 - 按艺人做基础匹配。
 - 创建 Jellyfin 歌单。
-- 向已有歌单添加歌曲。
-- 查询歌单列表和详情。
-- 删除歌单。
 - Jellyfin 管理界面导入操作页。
 - 使用 Jellyfin 日志输出排查链路。
 
@@ -24,12 +21,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 产物：
 
 - `dist\NetEaseMusicImporter\`
-- `dist\NetEaseMusicImporter-0.1.1.zip`
+- `dist\NetEaseMusicImporter-0.1.4.zip`
 
 ## 手动安装
 
 1. 停止 Jellyfin。
-2. 解压 `dist\NetEaseMusicImporter-0.1.1.zip`。
+2. 解压 `dist\NetEaseMusicImporter-0.1.4.zip`。
 3. 把解压后的文件放入 Jellyfin 插件目录：
 
 Windows：
@@ -65,7 +62,7 @@ build.yaml
 
 进入 Jellyfin 管理后台，打开 `NetEase Music` 页面：
 
-1. 确认页面显示的当前用户。
+1. 确认页面显示 `Page version: 0.1.4` 和当前用户。
 2. 输入网易云歌单 URL。
 3. 可选填写 Jellyfin 歌单名。
 4. 选择 `Private playlist` 或 `Public playlist`。
@@ -85,7 +82,9 @@ Authorization: MediaBrowser Token="你的 API Token"
 ```powershell
 $headers = @{ Authorization = 'MediaBrowser Token="你的 API Token"' }
 $body = @{
-  url = "https://music.163.com/m/playlist?id=13822175569"
+  Url = "https://music.163.com/m/playlist?id=13822175569"
+  PlaylistName = "网易云歌单"
+  Public = $false
 } | ConvertTo-Json
 
 Invoke-RestMethod `
@@ -96,26 +95,13 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-搜索 Jellyfin 歌曲：
-
-```powershell
-Invoke-RestMethod `
-  -Uri "http://localhost:8096/NetEaseMusic/SearchSongs?query=test" `
-  -Headers $headers
-```
-
 其他接口：
 
-- `POST /NetEaseMusic/CreatePlaylist`
-- `POST /NetEaseMusic/AddSongs`
 - `GET /NetEaseMusic/CurrentUser`
-- `GET /NetEaseMusic/Playlists`
-- `GET /NetEaseMusic/Playlist/{playlistId}`
-- `DELETE /NetEaseMusic/Playlist/{playlistId}`
 
 ## 日志排查
 
-API 响应会返回 `operationId`。在 Jellyfin 日志中搜索该值，可定位同一次请求的抓取、匹配、创建、添加、查询或删除日志。
+API 响应会返回 `operationId`。在 Jellyfin 日志中搜索该值，可定位同一次请求的抓取、匹配和创建日志。
 
 ## 当前限制
 

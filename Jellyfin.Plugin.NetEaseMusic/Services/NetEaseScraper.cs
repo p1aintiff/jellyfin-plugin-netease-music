@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.NetEaseMusic.Services;
 
-public class NetEaseScraper : INetEaseScraper
+public class NetEaseScraper
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<NetEaseScraper> _logger;

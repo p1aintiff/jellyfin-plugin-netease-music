@@ -10,6 +10,7 @@
                 <form id="NetEaseMusicImportForm">
                     <div class="verticalSection">
                         <h2>NetEase Music</h2>
+                        <p>Page version: 0.1.4</p>
                         <p id="currentUser">Current user: loading</p>
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
@@ -54,7 +55,9 @@
                     type: 'GET',
                     url: ApiClient.getUrl('NetEaseMusic/CurrentUser')
                 }).then(function (response) {
-                    currentUser.textContent = 'Current user: ' + response.name + ' (' + response.userId + ')';
+                    var name = response.name || response.Name;
+                    var userId = response.userId || response.UserId;
+                    currentUser.textContent = 'Current user: ' + name + ' (' + userId + ')';
                     submitButton.disabled = false;
                 }).catch(function () {
                     currentUser.textContent = 'Current user: unavailable';
@@ -86,11 +89,11 @@
                     event.preventDefault();
 
                     var button = form.querySelector('button[type="submit"]');
-                        var body = {
-                            url: page.querySelector('#playlistUrl').value,
-                            playlistName: page.querySelector('#playlistName').value || null,
-                            public: page.querySelector('#playlistVisibility').value === 'true'
-                        };
+                    var body = {
+                        Url: page.querySelector('#playlistUrl').value,
+                        PlaylistName: page.querySelector('#playlistName').value || null,
+                        Public: page.querySelector('#playlistVisibility').value === 'true'
+                    };
 
                     button.disabled = true;
                     result.classList.add('hide');
@@ -103,9 +106,9 @@
                         contentType: 'application/json'
                     }).then(function (response) {
                         showResult(
-                            response.playlistName + ': ' + response.matchedCount + '/' + response.totalCount + ' matched, ' + response.unmatchedCount + ' unmatched.',
-                            response.operationId,
-                            response.unmatchedSongs
+                            response.PlaylistName + ': ' + response.MatchedCount + '/' + response.TotalCount + ' matched, ' + response.UnmatchedCount + ' unmatched.',
+                            response.OperationId,
+                            response.UnmatchedSongs
                         );
                     }).catch(function (error) {
                         var message = 'Import failed.';

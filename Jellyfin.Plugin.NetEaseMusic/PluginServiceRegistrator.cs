@@ -9,9 +9,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 {
     public void RegisterServices(IServiceCollection services, IServerApplicationHost applicationHost)
     {
-        services.AddSingleton<ISongMatcher, SongMatcher>();
+        services.AddSingleton<SongMatcher>();
 
-        services.AddHttpClient<INetEaseScraper, NetEaseScraper>(client =>
+        services.AddHttpClient<NetEaseScraper>(client =>
         {
             client.DefaultRequestHeaders.UserAgent.ParseAdd(
                 "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) " +

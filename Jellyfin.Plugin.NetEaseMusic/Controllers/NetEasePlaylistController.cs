@@ -2,8 +2,6 @@ using Jellyfin.Data.Entities;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.NetEaseMusic.Models;
 using Jellyfin.Plugin.NetEaseMusic.Services;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Playlists;
@@ -18,8 +16,8 @@ namespace Jellyfin.Plugin.NetEaseMusic.Controllers;
 [Produces("application/json")]
 public class NetEasePlaylistController : ControllerBase
 {
-    private readonly INetEaseScraper _scraper;
-    private readonly ISongMatcher _matcher;
+    private readonly NetEaseScraper _scraper;
+    private readonly SongMatcher _matcher;
     private readonly ILibraryManager _libraryManager;
     private readonly IPlaylistManager _playlistManager;
     private readonly IAuthorizationContext _authorizationContext;
@@ -27,8 +25,8 @@ public class NetEasePlaylistController : ControllerBase
     private readonly ILogger<NetEasePlaylistController> _logger;
 
     public NetEasePlaylistController(
-        INetEaseScraper scraper,
-        ISongMatcher matcher,
+        NetEaseScraper scraper,
+        SongMatcher matcher,
         ILibraryManager libraryManager,
         IPlaylistManager playlistManager,
         IAuthorizationContext authorizationContext,
@@ -77,6 +75,8 @@ public class NetEasePlaylistController : ControllerBase
 
         _logger.LogInformation("Import request started");
 
+        _logger.LogInformation("Import request URL length is {Length}", request.Url.Length);
+
         if (string.IsNullOrWhiteSpace(request.Url) ||
             !request.Url.Contains("music.163.com"))
         {
@@ -113,9 +113,9 @@ public class NetEasePlaylistController : ControllerBase
         foreach (var song in neteaseData.Songs)
         {
             var match = await _matcher.FindMatchAsync(song, ct);
-            if (match.HasValue)
+            if (match != null)
             {
-                matchedIds.Add(match.Value.ItemId);
+                matchedIds.Add(match);
             }
             else
             {
@@ -140,7 +140,7 @@ public class NetEasePlaylistController : ControllerBase
 
         // 4. Create the playlist
         var playlistName = request.PlaylistName ?? neteaseData.Name;
-        PlaylistResult playlist;
+        ImportPlaylistResult playlist;
         try
         {
             playlist = await CreatePlaylistInternal(playlistName, matchedIds, user, request.Public);
@@ -166,245 +166,7 @@ public class NetEasePlaylistController : ControllerBase
         };
     }
 
-    /// <summary>
-    /// Create a new playlist in Jellyfin.
-    /// </summary>
-    [HttpPost("CreatePlaylist")]
-    public async Task<ActionResult<PlaylistResult>> CreatePlaylist(
-        [FromBody] CreatePlaylistRequest request, CancellationToken ct)
-    {
-        var operationId = NewOperationId();
-        using var scope = _logger.BeginScope(new Dictionary<string, object>
-        {
-            ["OperationId"] = operationId,
-            ["Endpoint"] = "CreatePlaylist"
-        });
-
-        _logger.LogInformation("Create playlist request started with {SongCount} songs", request.SongItemIds.Count);
-
-        var user = await GetCurrentUser();
-        if (user == null)
-        {
-            _logger.LogError("Create playlist failed: no Jellyfin request user found");
-            return StatusCode(401, new { operationId, error = "No Jellyfin request user found" });
-        }
-
-        try
-        {
-            var playlist = await CreatePlaylistInternal(request.Name, request.SongItemIds, user, request.Public);
-            playlist.OperationId = operationId;
-
-            _logger.LogInformation("Created playlist '{Name}' ({PlaylistId}) with {SongCount} songs",
-                playlist.Name, playlist.PlaylistId, request.SongItemIds.Count);
-
-            return playlist;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Jellyfin playlist");
-            return StatusCode(500, new { operationId, error = $"Failed to create Jellyfin playlist: {ex.Message}" });
-        }
-    }
-
-    /// <summary>
-    /// Add songs to an existing Jellyfin playlist.
-    /// </summary>
-    [HttpPost("AddSongs")]
-    public async Task<ActionResult<PlaylistResult>> AddSongs(
-        [FromBody] AddSongsRequest request, CancellationToken ct)
-    {
-        var operationId = NewOperationId();
-        using var scope = _logger.BeginScope(new Dictionary<string, object>
-        {
-            ["OperationId"] = operationId,
-            ["Endpoint"] = "AddSongs",
-            ["PlaylistId"] = request.PlaylistId
-        });
-
-        _logger.LogInformation("Add songs request started with {SongCount} songs", request.SongItemIds.Count);
-
-        if (!Guid.TryParse(request.PlaylistId, out var playlistGuid))
-        {
-            _logger.LogWarning("Add songs request rejected: invalid playlist ID");
-            return BadRequest(new { error = "Invalid playlist ID" });
-        }
-
-        var playlist = _libraryManager.GetItemById(playlistGuid) as Playlist;
-        if (playlist == null)
-        {
-            _logger.LogWarning("Add songs request failed: playlist not found");
-            return NotFound(new { error = "Playlist not found" });
-        }
-
-        var existingIds = new HashSet<string>(
-            (playlist.LinkedChildren ?? Array.Empty<LinkedChild>())
-            .Select(lc => lc.ItemId.ToString())
-            .Where(id => id != null)
-            .Select(id => id!));
-
-        var newChildren = new List<LinkedChild>(playlist.LinkedChildren ?? Array.Empty<LinkedChild>());
-        var addedCount = 0;
-        foreach (var songId in request.SongItemIds)
-        {
-            if (!existingIds.Contains(songId) && Guid.TryParse(songId, out var songGuid))
-            {
-                newChildren.Add(new LinkedChild { ItemId = songGuid });
-                addedCount++;
-            }
-        }
-
-        playlist.LinkedChildren = newChildren.ToArray();
-        await _libraryManager.UpdateItemAsync(playlist, playlist, ItemUpdateType.MetadataEdit, ct);
-        _logger.LogInformation("Added {AddedCount} songs to playlist '{Name}' ({PlaylistId})",
-            addedCount, playlist.Name, playlist.Id);
-
-        return new PlaylistResult
-        {
-            OperationId = operationId,
-            PlaylistId = playlist.Id.ToString(),
-            Name = playlist.Name ?? "",
-            SongCount = newChildren.Count,
-            DateCreated = playlist.DateCreated
-        };
-    }
-
-    /// <summary>
-    /// List all playlists in the Jellyfin library.
-    /// </summary>
-    [HttpGet("Playlists")]
-    public ActionResult<PlaylistListResult> ListPlaylists()
-    {
-        var operationId = NewOperationId();
-        using var scope = _logger.BeginScope(new Dictionary<string, object>
-        {
-            ["OperationId"] = operationId,
-            ["Endpoint"] = "Playlists"
-        });
-
-        var query = new InternalItemsQuery
-        {
-            IncludeItemTypes = new[] { BaseItemKind.Playlist }
-        };
-        var playlists = _libraryManager.GetItemList(query);
-        _logger.LogInformation("Listed {Count} playlists", playlists.Count);
-
-        return new PlaylistListResult
-        {
-            OperationId = operationId,
-            Playlists = playlists.Select(p => new PlaylistResult
-            {
-                OperationId = operationId,
-                PlaylistId = p.Id.ToString(),
-                Name = p.Name ?? "",
-                SongCount = (p as Playlist)?.LinkedChildren?.Length ?? 0,
-                DateCreated = p.DateCreated
-            }).ToList()
-        };
-    }
-
-    /// <summary>
-    /// Get a specific playlist with details.
-    /// </summary>
-    [HttpGet("Playlist/{playlistId}")]
-    public ActionResult<PlaylistResult> GetPlaylist(string playlistId)
-    {
-        var operationId = NewOperationId();
-        using var scope = _logger.BeginScope(new Dictionary<string, object>
-        {
-            ["OperationId"] = operationId,
-            ["Endpoint"] = "Playlist",
-            ["PlaylistId"] = playlistId
-        });
-
-        if (!Guid.TryParse(playlistId, out var guid))
-        {
-            _logger.LogWarning("Get playlist request rejected: invalid playlist ID");
-            return BadRequest(new { error = "Invalid playlist ID" });
-        }
-
-        var playlist = _libraryManager.GetItemById(guid) as Playlist;
-        if (playlist == null)
-        {
-            _logger.LogWarning("Get playlist failed: playlist not found");
-            return NotFound(new { error = "Playlist not found" });
-        }
-
-        _logger.LogInformation("Found playlist '{Name}' ({PlaylistId}) with {SongCount} songs",
-            playlist.Name, playlist.Id, playlist.LinkedChildren?.Length ?? 0);
-
-        return new PlaylistResult
-        {
-            OperationId = operationId,
-            PlaylistId = playlist.Id.ToString(),
-            Name = playlist.Name ?? "",
-            SongCount = playlist.LinkedChildren?.Length ?? 0,
-            DateCreated = playlist.DateCreated
-        };
-    }
-
-    /// <summary>
-    /// Delete a playlist.
-    /// </summary>
-    [HttpDelete("Playlist/{playlistId}")]
-    public ActionResult<DeleteResult> DeletePlaylist(string playlistId)
-    {
-        var operationId = NewOperationId();
-        using var scope = _logger.BeginScope(new Dictionary<string, object>
-        {
-            ["OperationId"] = operationId,
-            ["Endpoint"] = "DeletePlaylist",
-            ["PlaylistId"] = playlistId
-        });
-
-        if (!Guid.TryParse(playlistId, out var guid))
-        {
-            _logger.LogWarning("Delete playlist request rejected: invalid playlist ID");
-            return BadRequest(new { error = "Invalid playlist ID" });
-        }
-
-        var playlist = _libraryManager.GetItemById(guid);
-        if (playlist == null)
-        {
-            _logger.LogWarning("Delete playlist failed: playlist not found");
-            return NotFound(new { error = "Playlist not found" });
-        }
-
-        var playlistName = playlist.Name;
-        _libraryManager.DeleteItem(playlist, new DeleteOptions());
-        _logger.LogInformation("Deleted playlist '{Name}' ({PlaylistId})", playlistName, playlistId);
-
-        return new DeleteResult { OperationId = operationId, Success = true, Message = $"Playlist '{playlistName}' deleted" };
-    }
-
-    /// <summary>
-    /// Search the Jellyfin library for songs.
-    /// </summary>
-    [HttpGet("SearchSongs")]
-    public async Task<ActionResult<List<SongSearchResult>>> SearchSongs(
-        [FromQuery] string query, CancellationToken ct, [FromQuery] int maxResults = 20)
-    {
-        var operationId = NewOperationId();
-        using var scope = _logger.BeginScope(new Dictionary<string, object>
-        {
-            ["OperationId"] = operationId,
-            ["Endpoint"] = "SearchSongs"
-        });
-
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            _logger.LogWarning("Search songs request rejected: empty query");
-            return BadRequest(new { error = "Query parameter is required" });
-        }
-
-        var results = await _matcher.SearchSongsAsync(query, maxResults, ct);
-        foreach (var result in results)
-            result.OperationId = operationId;
-
-        _logger.LogInformation("Search songs returned {Count} results", results.Count);
-        return results;
-    }
-
-    private async Task<PlaylistResult> CreatePlaylistInternal(string name, List<string> songItemIds, User user, bool isPublic)
+    private async Task<ImportPlaylistResult> CreatePlaylistInternal(string name, List<string> songItemIds, User user, bool isPublic)
     {
         var itemIds = songItemIds
             .Where(id => Guid.TryParse(id, out _))
@@ -426,7 +188,7 @@ public class NetEasePlaylistController : ControllerBase
         var playlistId = Guid.Parse(result.Id);
         var playlist = _libraryManager.GetItemById(playlistId) as Playlist;
 
-        return new PlaylistResult
+        return new ImportPlaylistResult
         {
             PlaylistId = result.Id,
             Name = playlist?.Name ?? name,

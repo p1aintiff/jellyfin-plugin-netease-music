@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.NetEaseMusic.Services;
 
-public class SongMatcher : ISongMatcher
+public class SongMatcher
 {
     private readonly ILibraryManager _libraryManager;
     private readonly ILogger<SongMatcher> _logger;
@@ -19,7 +19,7 @@ public class SongMatcher : ISongMatcher
         _logger = logger;
     }
 
-    public Task<(string ItemId, string UserId)?> FindMatchAsync(NetEaseSongData song, CancellationToken ct = default)
+    public Task<string?> FindMatchAsync(NetEaseSongData song, CancellationToken ct = default)
     {
         // Try exact match first: song name
         var candidates = SearchByName(song.Name, 30);
@@ -27,7 +27,7 @@ public class SongMatcher : ISongMatcher
         if (candidates.Count == 0)
         {
             _logger.LogDebug("No candidates found for '{SongName}'", song.Name);
-            return Task.FromResult<(string ItemId, string UserId)?>(null);
+            return Task.FromResult<string?>(null);
         }
 
         // Try to match by artist
@@ -37,36 +37,13 @@ public class SongMatcher : ISongMatcher
             if (ArtistMatches(audio, song.Artists))
             {
                 _logger.LogDebug("Matched '{Song}' -> Jellyfin item {ItemId}", song.Name, audio.Id);
-                return Task.FromResult<(string ItemId, string UserId)?>((audio.Id.ToString(), Guid.Empty.ToString()));
+                return Task.FromResult<string?>(audio.Id.ToString());
             }
         }
 
         _logger.LogDebug("No match for '{Song}' by {Artists}",
             song.Name, string.Join(", ", song.Artists));
-        return Task.FromResult<(string ItemId, string UserId)?>(null);
-    }
-
-    public Task<List<SongSearchResult>> SearchSongsAsync(string query, int maxResults = 20, CancellationToken ct = default)
-    {
-        _logger.LogInformation("Searching Jellyfin songs for query '{Query}' with max results {MaxResults}", query, maxResults);
-        var items = SearchByName(query, maxResults);
-        var results = items.Select(item =>
-        {
-            string? artist = null;
-            if (item is Audio audio)
-                artist = string.Join(", ", audio.Artists ?? Array.Empty<string>());
-
-            return new SongSearchResult
-            {
-                ItemId = item.Id.ToString(),
-                Name = item.Name ?? "",
-                Artist = artist ?? "",
-                Album = item.Album ?? ""
-            };
-        }).ToList();
-
-        _logger.LogInformation("Jellyfin song search returned {Count} results", results.Count);
-        return Task.FromResult(results);
+        return Task.FromResult<string?>(null);
     }
 
     private List<BaseItem> SearchByName(string name, int limit)
