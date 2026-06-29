@@ -48,3 +48,9 @@ public class SongSearchResult
     public string Artist { get; set; } = string.Empty;
     public string Album { get; set; } = string.Empty;
 }
+
+public class CurrentUserResult
+{
+    public string UserId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+}

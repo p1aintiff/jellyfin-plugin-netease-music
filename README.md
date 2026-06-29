@@ -24,12 +24,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 产物：
 
 - `dist\NetEaseMusicImporter\`
-- `dist\NetEaseMusicImporter-0.1.0.zip`
+- `dist\NetEaseMusicImporter-0.1.1.zip`
 
 ## 手动安装
 
 1. 停止 Jellyfin。
-2. 解压 `dist\NetEaseMusicImporter-0.1.0.zip`。
+2. 解压 `dist\NetEaseMusicImporter-0.1.1.zip`。
 3. 把解压后的文件放入 Jellyfin 插件目录：
 
 Windows：
@@ -65,10 +65,12 @@ build.yaml
 
 进入 Jellyfin 管理后台，打开 `NetEase Music` 页面：
 
-1. 输入网易云歌单 URL。
-2. 可选填写 Jellyfin 歌单名。
-3. 点击 `Import playlist`。
-4. 页面会显示匹配数量、未匹配数量和 `operationId`。
+1. 确认页面显示的当前用户。
+2. 输入网易云歌单 URL。
+3. 可选填写 Jellyfin 歌单名。
+4. 选择 `Private playlist` 或 `Public playlist`。
+5. 点击 `Import playlist`。
+6. 页面会显示匹配数量、未匹配数量和 `operationId`。
 
 ## API
 
@@ -106,6 +108,7 @@ Invoke-RestMethod `
 
 - `POST /NetEaseMusic/CreatePlaylist`
 - `POST /NetEaseMusic/AddSongs`
+- `GET /NetEaseMusic/CurrentUser`
 - `GET /NetEaseMusic/Playlists`
 - `GET /NetEaseMusic/Playlist/{playlistId}`
 - `DELETE /NetEaseMusic/Playlist/{playlistId}`

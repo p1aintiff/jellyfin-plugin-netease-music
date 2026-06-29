@@ -10,11 +10,18 @@
                 <form id="NetEaseMusicImportForm">
                     <div class="verticalSection">
                         <h2>NetEase Music</h2>
+                        <p id="currentUser">Current user: loading</p>
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
                         </div>
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistName" name="playlistName" type="text" label="Jellyfin playlist name" />
+                        </div>
+                        <div class="selectContainer">
+                            <select is="emby-select" id="playlistVisibility" label="Playlist visibility">
+                                <option value="false">Private playlist</option>
+                                <option value="true">Public playlist</option>
+                            </select>
                         </div>
                         <button is="emby-button" type="submit" class="raised button-submit block">
                             <span>Import playlist</span>
@@ -38,6 +45,20 @@
                 var summary = page.querySelector('#importSummary');
                 var operation = page.querySelector('#operationId');
                 var unmatched = page.querySelector('#unmatchedSongs');
+                var currentUser = page.querySelector('#currentUser');
+                var submitButton = form.querySelector('button[type="submit"]');
+
+                submitButton.disabled = true;
+
+                ApiClient.ajax({
+                    type: 'GET',
+                    url: ApiClient.getUrl('NetEaseMusic/CurrentUser')
+                }).then(function (response) {
+                    currentUser.textContent = 'Current user: ' + response.name + ' (' + response.userId + ')';
+                    submitButton.disabled = false;
+                }).catch(function () {
+                    currentUser.textContent = 'Current user: unavailable';
+                });
 
                 function showResult(text, operationId, songs) {
                     summary.textContent = text;
@@ -65,10 +86,11 @@
                     event.preventDefault();
 
                     var button = form.querySelector('button[type="submit"]');
-                    var body = {
-                        url: page.querySelector('#playlistUrl').value,
-                        playlistName: page.querySelector('#playlistName').value || null
-                    };
+                        var body = {
+                            url: page.querySelector('#playlistUrl').value,
+                            playlistName: page.querySelector('#playlistName').value || null,
+                            public: page.querySelector('#playlistVisibility').value === 'true'
+                        };
 
                     button.disabled = true;
                     result.classList.add('hide');

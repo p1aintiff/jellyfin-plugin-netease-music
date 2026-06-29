@@ -5,7 +5,8 @@ $project = Join-Path $root "Jellyfin.Plugin.NetEaseMusic\Jellyfin.Plugin.NetEase
 $publish = Join-Path $root "Jellyfin.Plugin.NetEaseMusic\bin\Release\net8.0\publish"
 $dist = Join-Path $root "dist"
 $packageDir = Join-Path $dist "NetEaseMusicImporter"
-$zip = Join-Path $dist "NetEaseMusicImporter-0.1.0.zip"
+$version = "0.1.1"
+$zip = Join-Path $dist "NetEaseMusicImporter-$version.zip"
 
 dotnet publish $project -c Release
 

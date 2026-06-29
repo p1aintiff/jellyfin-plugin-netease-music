@@ -16,7 +16,7 @@
 | 搜索歌曲 API | 初步实现 | 70% | 返回歌曲 ID、名称、艺人、专辑 | 验证排序和返回数量 |
 | Jellyfin 操作页 | 已实现 | 70% | 管理界面可输入网易云歌单 URL 并导入 | 在真实 Jellyfin 前端验证页面加载和请求 |
 | 日志系统 | 已实现 | 80% | 使用 Jellyfin `ILogger`，API 响应返回 `OperationId` 便于排查 | 真实使用后按日志补缺口 |
-| 插件打包 | 已实现 | 80% | 可生成 `dist/NetEaseMusicImporter-0.1.0.zip` | 在 Jellyfin 插件目录中安装验证 |
+| 插件打包 | 已实现 | 80% | 可生成 `dist/NetEaseMusicImporter-0.1.1.zip` | 在 Jellyfin 插件目录中安装验证 |
 | 配置项 | 暂不接入 | 20% | 配置类存在，但简化后暂未使用 | 真实需求出现后再接入 |
 | 编译状态 | 已通过 | 100% | `dotnet build .\JellyfinMusic.slnx` 通过，0 警告，0 错误 | 每次修改后保持验证 |
 | 测试 | 部分建立 | 35% | smoke test 可验证网易云抓取 | 补最小单元测试 |
@@ -24,7 +24,7 @@
 
 ## 下一步
 
-1. 安装 `dist/NetEaseMusicImporter-0.1.0.zip` 到真实 Jellyfin 实例。
+1. 安装 `dist/NetEaseMusicImporter-0.1.1.zip` 到真实 Jellyfin 实例。
 2. 用示例网易云歌单跑完整导入。
 3. 验证歌单创建、添加歌曲、删除歌单是否持久化。
 4. 根据真实失败点补最小测试。

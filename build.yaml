@@ -1,6 +1,6 @@
 name: "NetEase Music Importer"
 guid: "a1b2c3d4-0000-4000-8000-000000000001"
-version: "0.1.0.0"
+version: "0.1.1.0"
 targetAbi: "10.10.7.0"
 framework: "net8.0"
 overview: "Import NetEase Cloud Music playlists into Jellyfin."

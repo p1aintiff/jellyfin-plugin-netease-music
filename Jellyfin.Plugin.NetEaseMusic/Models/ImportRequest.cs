@@ -5,6 +5,7 @@ public class ImportRequest
     public string Url { get; set; } = string.Empty;
     public string? PlaylistName { get; set; }
     public bool SkipDuplicates { get; set; } = true;
+    public bool Public { get; set; }
 }
 
 public class AddSongsRequest
@@ -17,4 +18,5 @@ public class CreatePlaylistRequest
 {
     public string Name { get; set; } = string.Empty;
     public List<string> SongItemIds { get; set; } = new();
+    public bool Public { get; set; }
 }

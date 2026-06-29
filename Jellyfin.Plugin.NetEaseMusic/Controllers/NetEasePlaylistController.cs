@@ -5,7 +5,9 @@ using Jellyfin.Plugin.NetEaseMusic.Services;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Playlists;
+using MediaBrowser.Model.Playlists;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -19,6 +21,8 @@ public class NetEasePlaylistController : ControllerBase
     private readonly INetEaseScraper _scraper;
     private readonly ISongMatcher _matcher;
     private readonly ILibraryManager _libraryManager;
+    private readonly IPlaylistManager _playlistManager;
+    private readonly IAuthorizationContext _authorizationContext;
     private readonly IUserManager _userManager;
     private readonly ILogger<NetEasePlaylistController> _logger;
 
@@ -26,14 +30,35 @@ public class NetEasePlaylistController : ControllerBase
         INetEaseScraper scraper,
         ISongMatcher matcher,
         ILibraryManager libraryManager,
+        IPlaylistManager playlistManager,
+        IAuthorizationContext authorizationContext,
         IUserManager userManager,
         ILogger<NetEasePlaylistController> logger)
     {
         _scraper = scraper;
         _matcher = matcher;
         _libraryManager = libraryManager;
+        _playlistManager = playlistManager;
+        _authorizationContext = authorizationContext;
         _userManager = userManager;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Get the current Jellyfin request user.
+    /// </summary>
+    [HttpGet("CurrentUser")]
+    public async Task<ActionResult<CurrentUserResult>> CurrentUser()
+    {
+        var user = await GetCurrentUser();
+        if (user == null)
+            return Unauthorized(new { error = "No Jellyfin request user found" });
+
+        return new CurrentUserResult
+        {
+            UserId = user.Id.ToString(),
+            Name = user.Username
+        };
     }
 
     /// <summary>
@@ -106,24 +131,33 @@ public class NetEasePlaylistController : ControllerBase
         _logger.LogInformation("Matched {Matched}/{Total} songs", matchedIds.Count, neteaseData.Songs.Count);
 
         // 3. Get a user for ownership
-        var user = _userManager.Users.FirstOrDefault();
+        var user = await GetCurrentUser();
         if (user == null)
         {
-            _logger.LogError("Import failed: no Jellyfin user found");
-            return StatusCode(500, new { error = "No Jellyfin user found" });
+            _logger.LogError("Import failed: no Jellyfin request user found");
+            return StatusCode(401, new { operationId, error = "No Jellyfin request user found" });
         }
 
         // 4. Create the playlist
         var playlistName = request.PlaylistName ?? neteaseData.Name;
-        var playlist = CreatePlaylistInternal(playlistName, matchedIds, user);
+        PlaylistResult playlist;
+        try
+        {
+            playlist = await CreatePlaylistInternal(playlistName, matchedIds, user, request.Public);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Jellyfin playlist");
+            return StatusCode(500, new { operationId, error = $"Failed to create Jellyfin playlist: {ex.Message}" });
+        }
 
         _logger.LogInformation("Created playlist '{Name}' ({Id}) with {Count} songs",
-            playlistName, playlist.Id, matchedIds.Count);
+            playlistName, playlist.PlaylistId, matchedIds.Count);
 
         return new ImportResult
         {
             OperationId = operationId,
-            PlaylistId = playlist.Id.ToString(),
+            PlaylistId = playlist.PlaylistId,
             PlaylistName = playlistName,
             MatchedCount = matchedIds.Count,
             UnmatchedCount = unmatched.Count,
@@ -148,25 +182,28 @@ public class NetEasePlaylistController : ControllerBase
 
         _logger.LogInformation("Create playlist request started with {SongCount} songs", request.SongItemIds.Count);
 
-        var user = _userManager.Users.FirstOrDefault();
+        var user = await GetCurrentUser();
         if (user == null)
         {
-            _logger.LogError("Create playlist failed: no Jellyfin user found");
-            return StatusCode(500, new { error = "No Jellyfin user found" });
+            _logger.LogError("Create playlist failed: no Jellyfin request user found");
+            return StatusCode(401, new { operationId, error = "No Jellyfin request user found" });
         }
 
-        var playlist = CreatePlaylistInternal(request.Name, request.SongItemIds, user);
-        _logger.LogInformation("Created playlist '{Name}' ({PlaylistId}) with {SongCount} songs",
-            playlist.Name, playlist.Id, request.SongItemIds.Count);
-
-        return new PlaylistResult
+        try
         {
-            OperationId = operationId,
-            PlaylistId = playlist.Id.ToString(),
-            Name = playlist.Name ?? request.Name,
-            SongCount = request.SongItemIds.Count,
-            DateCreated = playlist.DateCreated
-        };
+            var playlist = await CreatePlaylistInternal(request.Name, request.SongItemIds, user, request.Public);
+            playlist.OperationId = operationId;
+
+            _logger.LogInformation("Created playlist '{Name}' ({PlaylistId}) with {SongCount} songs",
+                playlist.Name, playlist.PlaylistId, request.SongItemIds.Count);
+
+            return playlist;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Jellyfin playlist");
+            return StatusCode(500, new { operationId, error = $"Failed to create Jellyfin playlist: {ex.Message}" });
+        }
     }
 
     /// <summary>
@@ -367,20 +404,41 @@ public class NetEasePlaylistController : ControllerBase
         return results;
     }
 
-    private Playlist CreatePlaylistInternal(string name, List<string> songItemIds, User user)
+    private async Task<PlaylistResult> CreatePlaylistInternal(string name, List<string> songItemIds, User user, bool isPublic)
     {
-        var playlist = new Playlist
+        var itemIds = songItemIds
+            .Where(id => Guid.TryParse(id, out _))
+            .Select(Guid.Parse)
+            .ToList();
+
+        var result = await _playlistManager.CreatePlaylist(new PlaylistCreationRequest
         {
             Name = name,
-            OwnerUserId = user.Id,
-            LinkedChildren = songItemIds
-                .Where(id => Guid.TryParse(id, out _))
-                .Select(id => new LinkedChild { ItemId = Guid.Parse(id) })
-                .ToArray()
-        };
+            UserId = user.Id,
+            ItemIdList = itemIds,
+            MediaType = MediaType.Audio,
+            Public = isPublic
+        });
 
-        _libraryManager.CreateItem(playlist, null);
-        return playlist;
+        _logger.LogInformation("Playlist created for user {UserId} with public={Public} and playlistId={PlaylistId}",
+            user.Id, isPublic, result.Id);
+
+        var playlistId = Guid.Parse(result.Id);
+        var playlist = _libraryManager.GetItemById(playlistId) as Playlist;
+
+        return new PlaylistResult
+        {
+            PlaylistId = result.Id,
+            Name = playlist?.Name ?? name,
+            SongCount = itemIds.Count,
+            DateCreated = playlist?.DateCreated ?? DateTime.UtcNow
+        };
+    }
+
+    private async Task<User?> GetCurrentUser()
+    {
+        var authorization = await _authorizationContext.GetAuthorizationInfo(Request);
+        return authorization.User ?? _userManager.GetUserById(authorization.UserId);
     }
 
     private static string NewOperationId()
