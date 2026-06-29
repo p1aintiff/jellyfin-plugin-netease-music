@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jellyfin.Plugin.NetEaseMusic.SmokeTest")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1ba98e8347df1a06e7b5068cba25c931b3c8d69e")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jellyfin.Plugin.NetEaseMusic.SmokeTest")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jellyfin.Plugin.NetEaseMusic.SmokeTest")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

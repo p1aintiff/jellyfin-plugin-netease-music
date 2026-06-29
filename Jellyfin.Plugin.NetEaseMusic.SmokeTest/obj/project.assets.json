@@ -37,7 +37,7 @@
           "buildTransitive/net6.0/Microsoft.Extensions.Logging.Abstractions.targets": {}
         }
       },
-      "Jellyfin.Plugin.NetEaseMusic/0.1.0": {
+      "Jellyfin.Plugin.NetEaseMusic/0.1.4": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
         "compile": {
@@ -155,7 +155,7 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "Jellyfin.Plugin.NetEaseMusic/0.1.0": {
+    "Jellyfin.Plugin.NetEaseMusic/0.1.4": {
       "type": "project",
       "path": "../Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj",
       "msbuildProject": "../Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj"
@@ -163,7 +163,7 @@
   },
   "projectFileDependencyGroups": {
     "net10.0": [
-      "Jellyfin.Plugin.NetEaseMusic >= 0.1.0",
+      "Jellyfin.Plugin.NetEaseMusic >= 0.1.4",
       "Microsoft.Extensions.Logging.Abstractions >= 8.0.0"
     ]
   },

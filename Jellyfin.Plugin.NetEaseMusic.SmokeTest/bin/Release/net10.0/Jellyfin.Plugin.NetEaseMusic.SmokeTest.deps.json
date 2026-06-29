@@ -8,7 +8,7 @@
     ".NETCoreApp,Version=v10.0": {
       "Jellyfin.Plugin.NetEaseMusic.SmokeTest/1.0.0": {
         "dependencies": {
-          "Jellyfin.Plugin.NetEaseMusic": "0.1.0",
+          "Jellyfin.Plugin.NetEaseMusic": "0.1.4",
           "Microsoft.Extensions.Logging.Abstractions": "8.0.0"
         },
         "runtime": {
@@ -34,11 +34,11 @@
           }
         }
       },
-      "Jellyfin.Plugin.NetEaseMusic/0.1.0": {
+      "Jellyfin.Plugin.NetEaseMusic/0.1.4": {
         "runtime": {
           "Jellyfin.Plugin.NetEaseMusic.dll": {
-            "assemblyVersion": "0.1.0.0",
-            "fileVersion": "0.1.0.0"
+            "assemblyVersion": "0.1.4.0",
+            "fileVersion": "0.1.4.0"
           }
         }
       }
@@ -64,7 +64,7 @@
       "path": "microsoft.extensions.logging.abstractions/8.0.0",
       "hashPath": "microsoft.extensions.logging.abstractions.8.0.0.nupkg.sha512"
     },
-    "Jellyfin.Plugin.NetEaseMusic/0.1.0": {
+    "Jellyfin.Plugin.NetEaseMusic/0.1.4": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

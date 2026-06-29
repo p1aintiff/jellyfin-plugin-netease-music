@@ -12,11 +12,11 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jellyfin.Plugin.NetEaseMusic")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.4.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.4+1ba98e8347df1a06e7b5068cba25c931b3c8d69e")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jellyfin.Plugin.NetEaseMusic")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jellyfin.Plugin.NetEaseMusic")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.1.0.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.1.4.0")]
 
 // 由 MSBuild WriteCodeFragment 类生成。
 

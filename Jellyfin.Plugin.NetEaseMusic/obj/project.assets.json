@@ -1241,7 +1241,7 @@
     "C:\\Users\\szc_\\.nuget\\packages\\": {}
   },
   "project": {
-    "version": "0.1.0",
+    "version": "0.1.4",
     "restore": {
       "projectUniqueName": "D:\\code\\jellyfin_music\\Jellyfin.Plugin.NetEaseMusic\\Jellyfin.Plugin.NetEaseMusic.csproj",
       "projectName": "Jellyfin.Plugin.NetEaseMusic",
