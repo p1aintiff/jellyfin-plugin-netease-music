@@ -177,7 +177,6 @@ public class NetEasePlaylistController : ControllerBase
         {
             Name = name,
             UserId = user.Id,
-            ItemIdList = itemIds,
             MediaType = MediaType.Audio,
             Public = isPublic
         });
@@ -186,6 +185,12 @@ public class NetEasePlaylistController : ControllerBase
             user.Id, isPublic, result.Id);
 
         var playlistId = Guid.Parse(result.Id);
+        if (itemIds.Count > 0)
+        {
+            await _playlistManager.AddItemToPlaylistAsync(playlistId, itemIds, user.Id);
+            _logger.LogInformation("Added {Count} songs to playlist {PlaylistId}", itemIds.Count, result.Id);
+        }
+
         var playlist = _libraryManager.GetItemById(playlistId) as Playlist;
 
         return new ImportPlaylistResult
