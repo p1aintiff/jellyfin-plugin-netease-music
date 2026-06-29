@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NetEase Music</title>
+</head>
+<body>
+    <div id="NetEaseMusicPage" data-role="page" class="page type-interior pluginConfigurationPage">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="NetEaseMusicImportForm">
+                    <div class="verticalSection">
+                        <h2>NetEase Music</h2>
+                        <div class="inputContainer">
+                            <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
+                        </div>
+                        <div class="inputContainer">
+                            <input is="emby-input" id="playlistName" name="playlistName" type="text" label="Jellyfin playlist name" />
+                        </div>
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Import playlist</span>
+                        </button>
+                    </div>
+                </form>
+
+                <div id="NetEaseMusicResult" class="verticalSection hide">
+                    <h2>Result</h2>
+                    <p id="importSummary"></p>
+                    <p id="operationId"></p>
+                    <div id="unmatchedSongs"></div>
+                </div>
+            </div>
+        </div>
+        <script>
+            (function () {
+                var page = document.getElementById('NetEaseMusicPage');
+                var form = page.querySelector('#NetEaseMusicImportForm');
+                var result = page.querySelector('#NetEaseMusicResult');
+                var summary = page.querySelector('#importSummary');
+                var operation = page.querySelector('#operationId');
+                var unmatched = page.querySelector('#unmatchedSongs');
+
+                function showResult(text, operationId, songs) {
+                    summary.textContent = text;
+                    operation.textContent = operationId ? 'OperationId: ' + operationId : '';
+                    unmatched.innerHTML = '';
+
+                    if (songs && songs.length) {
+                        var title = document.createElement('h3');
+                        title.textContent = 'Unmatched songs';
+                        unmatched.appendChild(title);
+
+                        var list = document.createElement('ul');
+                        songs.slice(0, 20).forEach(function (song) {
+                            var item = document.createElement('li');
+                            item.textContent = song.name + ' - ' + song.artist;
+                            list.appendChild(item);
+                        });
+                        unmatched.appendChild(list);
+                    }
+
+                    result.classList.remove('hide');
+                }
+
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+
+                    var button = form.querySelector('button[type="submit"]');
+                    var body = {
+                        url: page.querySelector('#playlistUrl').value,
+                        playlistName: page.querySelector('#playlistName').value || null
+                    };
+
+                    button.disabled = true;
+                    result.classList.add('hide');
+                    Dashboard.showLoadingMsg();
+
+                    ApiClient.ajax({
+                        type: 'POST',
+                        url: ApiClient.getUrl('NetEaseMusic/Import'),
+                        data: JSON.stringify(body),
+                        contentType: 'application/json'
+                    }).then(function (response) {
+                        showResult(
+                            response.playlistName + ': ' + response.matchedCount + '/' + response.totalCount + ' matched, ' + response.unmatchedCount + ' unmatched.',
+                            response.operationId,
+                            response.unmatchedSongs
+                        );
+                    }).catch(function (error) {
+                        var message = 'Import failed.';
+                        if (error && error.responseJSON) {
+                            message = error.responseJSON.error || message;
+                            showResult(message, error.responseJSON.operationId, null);
+                        } else {
+                            showResult(message, '', null);
+                        }
+                    }).finally(function () {
+                        button.disabled = false;
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

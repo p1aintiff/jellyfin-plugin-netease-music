@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj" />
+  <Project Path="Jellyfin.Plugin.NetEaseMusic.SmokeTest/Jellyfin.Plugin.NetEaseMusic.SmokeTest.csproj" />
+</Solution>
