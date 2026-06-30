@@ -78,7 +78,7 @@ jobs:
             }
           )
 
-          $manifest | ConvertTo-Json -Depth 8 | Set-Content "site/manifest.json"
+          ConvertTo-Json -InputObject $manifest -Depth 8 | Set-Content "site/manifest.json"
 
       - uses: actions/configure-pages@v6
         with:
