@@ -81,6 +81,8 @@ jobs:
           $manifest | ConvertTo-Json -Depth 8 | Set-Content "site/manifest.json"
 
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
