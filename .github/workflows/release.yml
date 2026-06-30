@@ -63,7 +63,11 @@ jobs:
 
           function New-PackageVersion($sourceDir, $version, $assemblyVersion) {
             $projectPath = Join-Path $sourceDir "Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj"
-            dotnet publish $projectPath -c Release
+            $publishOutput = dotnet publish $projectPath -c Release 2>&1
+            $publishOutput | ForEach-Object { Write-Host $_ }
+            if ($LASTEXITCODE -ne 0) {
+              throw "dotnet publish failed for $assemblyVersion"
+            }
 
             $publish = Join-Path $sourceDir "Jellyfin.Plugin.NetEaseMusic/bin/Release/net8.0/publish"
             $safeVersion = $version
