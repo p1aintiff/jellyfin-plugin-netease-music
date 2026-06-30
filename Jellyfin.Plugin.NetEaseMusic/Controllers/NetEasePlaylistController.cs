@@ -60,9 +60,19 @@ public class NetEasePlaylistController : ControllerBase
     }
 
     [HttpGet("Imports")]
-    public ActionResult<List<CachedImport>> Imports()
+    public ActionResult<List<CachedImportResult>> Imports()
     {
-        return Plugin.Instance?.Configuration.CachedImports ?? new List<CachedImport>();
+        var cachedImports = Plugin.Instance?.Configuration.CachedImports ?? new List<CachedImport>();
+        return cachedImports.Select(x =>
+        {
+            var playlist = _libraryManager.GetItemById(x.JellyfinPlaylistId) as Playlist;
+            return new CachedImportResult
+            {
+                NetEaseUrl = x.NetEaseUrl,
+                JellyfinPlaylistId = x.JellyfinPlaylistId,
+                PlaylistName = playlist?.Name ?? "Playlist not found"
+            };
+        }).ToList();
     }
 
     [HttpDelete("Imports/{playlistId}")]

@@ -31,3 +31,10 @@ public class CurrentUserResult
     public string UserId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
 }
+
+public class CachedImportResult
+{
+    public string NetEaseUrl { get; set; } = string.Empty;
+    public string JellyfinPlaylistId { get; set; } = string.Empty;
+    public string PlaylistName { get; set; } = string.Empty;
+}

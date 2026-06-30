@@ -10,7 +10,7 @@
                 <form id="NetEaseMusicImportForm">
                     <div class="verticalSection">
                         <h2>NetEase Music</h2>
-                        <p>Page version: 0.2.0</p>
+                        <p>Page version: 0.2.1</p>
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
                         </div>
@@ -160,17 +160,47 @@
                     }
 
                     items.forEach(function (item) {
-                        var row = document.createElement('div');
-                        row.style.marginBottom = '1em';
-
-                        var url = document.createElement('div');
-                        url.textContent = item.NetEaseUrl || item.netEaseUrl || '';
-                        row.appendChild(url);
-
                         var playlistId = item.JellyfinPlaylistId || item.jellyfinPlaylistId || '';
-                        var id = document.createElement('div');
-                        id.textContent = 'Jellyfin playlist: ' + playlistId;
-                        row.appendChild(id);
+                        var neteaseUrl = item.NetEaseUrl || item.netEaseUrl || '';
+                        var playlistName = item.PlaylistName || item.playlistName || 'Playlist not found';
+
+                        var row = document.createElement('div');
+                        row.style.border = '1px solid rgba(255,255,255,.16)';
+                        row.style.borderRadius = '8px';
+                        row.style.padding = '1em';
+                        row.style.marginBottom = '1em';
+                        row.style.display = 'flex';
+                        row.style.justifyContent = 'space-between';
+                        row.style.gap = '1em';
+                        row.style.alignItems = 'center';
+
+                        var info = document.createElement('div');
+                        info.style.minWidth = '0';
+                        info.style.flex = '1';
+
+                        var name = document.createElement('div');
+                        name.textContent = playlistName;
+                        name.style.fontWeight = '600';
+                        name.style.marginBottom = '.35em';
+                        info.appendChild(name);
+
+                        var url = document.createElement('a');
+                        url.href = neteaseUrl;
+                        url.target = '_blank';
+                        url.rel = 'noopener noreferrer';
+                        url.textContent = neteaseUrl;
+                        url.style.display = 'block';
+                        url.style.overflow = 'hidden';
+                        url.style.textOverflow = 'ellipsis';
+                        url.style.whiteSpace = 'nowrap';
+                        info.appendChild(url);
+
+                        row.appendChild(info);
+
+                        var actions = document.createElement('div');
+                        actions.style.display = 'flex';
+                        actions.style.gap = '.5em';
+                        actions.style.flexShrink = '0';
 
                         var update = document.createElement('button');
                         update.setAttribute('is', 'emby-button');
@@ -194,7 +224,7 @@
                                 update.disabled = false;
                             });
                         });
-                        row.appendChild(update);
+                        actions.appendChild(update);
 
                         var remove = document.createElement('button');
                         remove.setAttribute('is', 'emby-button');
@@ -210,7 +240,8 @@
                                 remove.disabled = false;
                             });
                         });
-                        row.appendChild(remove);
+                        actions.appendChild(remove);
+                        row.appendChild(actions);
 
                         importHistory.appendChild(row);
                     });
