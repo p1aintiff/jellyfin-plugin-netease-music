@@ -10,8 +10,7 @@
                 <form id="NetEaseMusicImportForm">
                     <div class="verticalSection">
                         <h2>NetEase Music</h2>
-                        <p>Page version: 0.1.5</p>
-                        <p id="currentUser">Current user: loading</p>
+                        <p>Page version: 0.1.6</p>
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
                         </div>
@@ -55,28 +54,6 @@
                 var summary = page.querySelector('#importSummary');
                 var operation = page.querySelector('#operationId');
                 var unmatched = page.querySelector('#unmatchedSongs');
-                var currentUser = page.querySelector('#currentUser');
-                var submitButton = form.querySelector('button[type="submit"]');
-
-                submitButton.disabled = true;
-
-                ApiClient.ajax({
-                    type: 'GET',
-                    url: ApiClient.getUrl('NetEaseMusic/CurrentUser')
-                }).then(function (response) {
-                    var user = asObject(response);
-                    var name = pick(user, ['Name', 'name', 'Username', 'username', 'UserName', 'userName']);
-                    var userId = pick(user, ['UserId', 'userId', 'Id', 'id']);
-                    if (name || userId) {
-                        currentUser.textContent = 'Current user: ' + (name || 'unknown') + (userId ? ' (' + userId + ')' : '');
-                        submitButton.disabled = false;
-                    } else {
-                        currentUser.textContent = 'Current user: unavailable';
-                    }
-                }).catch(function () {
-                    currentUser.textContent = 'Current user: unavailable';
-                });
-
                 function asObject(response) {
                     if (typeof response === 'string') {
                         try {
