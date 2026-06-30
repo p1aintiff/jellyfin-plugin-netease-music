@@ -1,8 +1,8 @@
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$project = Join-Path $root "Jellyfin.Plugin.NetEaseMusic\Jellyfin.Plugin.NetEaseMusic.csproj"
-$publish = Join-Path $root "Jellyfin.Plugin.NetEaseMusic\bin\Release\net8.0\publish"
+$project = Join-Path $root "Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj"
+$publish = Join-Path $root "Jellyfin.Plugin.NetEaseMusic/bin/Release/net8.0/publish"
 $dist = Join-Path $root "dist"
 $packageDir = Join-Path $dist "NetEaseMusicImporter"
 $projectXml = [xml](Get-Content $project)

@@ -1,3 +1,0 @@
-D:\code\jellyfin_music\Jellyfin.Plugin.NetEaseMusic\bin\Release\net8.0\publish\Jellyfin.Plugin.NetEaseMusic.dll
-D:\code\jellyfin_music\Jellyfin.Plugin.NetEaseMusic\bin\Release\net8.0\publish\Jellyfin.Plugin.NetEaseMusic.pdb
-D:\code\jellyfin_music\Jellyfin.Plugin.NetEaseMusic\bin\Release\net8.0\publish\Jellyfin.Plugin.NetEaseMusic.deps.json

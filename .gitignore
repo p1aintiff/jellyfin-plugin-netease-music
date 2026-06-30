@@ -1,4 +1,9 @@
-.agents
-.claude
-dist
-logs
+.agents/
+.claude/
+.vs/
+.idea/
+dist/
+logs/
+**/bin/
+**/obj/
+*.user

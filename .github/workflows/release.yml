@@ -1,0 +1,97 @@
+name: Build plugin repository
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+
+      - name: Build
+        run: dotnet build Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj -c Release
+
+      - name: Publish plugin repository
+        shell: pwsh
+        run: |
+          $project = "Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj"
+          $projectXml = [xml](Get-Content $project)
+          $version = $projectXml.Project.PropertyGroup.Version
+          $assemblyVersion = $projectXml.Project.PropertyGroup.AssemblyVersion
+          $targetAbi = "10.10.7.0"
+          $pluginId = "a1b2c3d4-0000-4000-8000-000000000001"
+          $pluginName = "NetEase Music Importer"
+          $repoName = "${{ github.event.repository.name }}"
+          $owner = "${{ github.repository_owner }}"
+          $baseUrl = "https://$owner.github.io/$repoName"
+
+          dotnet publish $project -c Release
+
+          $publish = "Jellyfin.Plugin.NetEaseMusic/bin/Release/net8.0/publish"
+          $packageDir = "site/NetEaseMusicImporter"
+          New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+          Copy-Item "$publish/Jellyfin.Plugin.NetEaseMusic.dll" $packageDir
+          Copy-Item "$publish/Jellyfin.Plugin.NetEaseMusic.pdb" $packageDir
+          Copy-Item "build.yaml" $packageDir
+
+          $zipName = "NetEaseMusicImporter-$version.zip"
+          $zipPath = "site/$zipName"
+          Compress-Archive -Path "$packageDir/*" -DestinationPath $zipPath -Force
+          $checksum = (Get-FileHash $zipPath -Algorithm MD5).Hash.ToLowerInvariant()
+          $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+          $manifest = @(
+            [ordered]@{
+              guid = $pluginId
+              name = $pluginName
+              description = "Import NetEase Cloud Music playlists into Jellyfin."
+              overview = "Import NetEase Cloud Music playlists into Jellyfin."
+              owner = $owner
+              category = "Music"
+              versions = @(
+                [ordered]@{
+                  version = $assemblyVersion
+                  changelog = "Automated build from GitHub Actions."
+                  targetAbi = $targetAbi
+                  sourceUrl = "$baseUrl/$zipName"
+                  checksum = $checksum
+                  timestamp = $timestamp
+                }
+              )
+            }
+          )
+
+          $manifest | ConvertTo-Json -Depth 8 | Set-Content "site/manifest.json"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

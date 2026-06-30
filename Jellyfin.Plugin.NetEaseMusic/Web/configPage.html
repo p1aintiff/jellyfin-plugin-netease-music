@@ -10,7 +10,7 @@
                 <form id="NetEaseMusicImportForm">
                     <div class="verticalSection">
                         <h2>NetEase Music</h2>
-                        <p>Page version: 0.1.4</p>
+                        <p>Page version: 0.1.5</p>
                         <p id="currentUser">Current user: loading</p>
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
@@ -18,17 +18,23 @@
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistName" name="playlistName" type="text" label="Jellyfin playlist name" />
                         </div>
-                        <div class="selectContainer">
-                            <select is="emby-select" id="playlistVisibility" label="Playlist visibility">
-                                <option value="false">Private playlist</option>
-                                <option value="true">Public playlist</option>
-                            </select>
+                        <div class="checkboxContainer">
+                            <label>
+                                <input is="emby-checkbox" id="playlistPublic" type="checkbox" checked />
+                                <span>Public playlist</span>
+                            </label>
                         </div>
                         <button is="emby-button" type="submit" class="raised button-submit block">
                             <span>Import playlist</span>
                         </button>
                     </div>
                 </form>
+
+                <div id="NetEaseMusicProgress" class="verticalSection hide">
+                    <h2>Status</h2>
+                    <progress id="importProgress" max="100" value="0" style="width:100%"></progress>
+                    <p id="importStatus"></p>
+                </div>
 
                 <div id="NetEaseMusicResult" class="verticalSection hide">
                     <h2>Result</h2>
@@ -42,6 +48,9 @@
             (function () {
                 var page = document.getElementById('NetEaseMusicPage');
                 var form = page.querySelector('#NetEaseMusicImportForm');
+                var progressSection = page.querySelector('#NetEaseMusicProgress');
+                var progress = page.querySelector('#importProgress');
+                var status = page.querySelector('#importStatus');
                 var result = page.querySelector('#NetEaseMusicResult');
                 var summary = page.querySelector('#importSummary');
                 var operation = page.querySelector('#operationId');
@@ -55,13 +64,44 @@
                     type: 'GET',
                     url: ApiClient.getUrl('NetEaseMusic/CurrentUser')
                 }).then(function (response) {
-                    var name = response.name || response.Name;
-                    var userId = response.userId || response.UserId;
-                    currentUser.textContent = 'Current user: ' + name + ' (' + userId + ')';
-                    submitButton.disabled = false;
+                    var user = asObject(response);
+                    var name = pick(user, ['Name', 'name', 'Username', 'username', 'UserName', 'userName']);
+                    var userId = pick(user, ['UserId', 'userId', 'Id', 'id']);
+                    if (name || userId) {
+                        currentUser.textContent = 'Current user: ' + (name || 'unknown') + (userId ? ' (' + userId + ')' : '');
+                        submitButton.disabled = false;
+                    } else {
+                        currentUser.textContent = 'Current user: unavailable';
+                    }
                 }).catch(function () {
                     currentUser.textContent = 'Current user: unavailable';
                 });
+
+                function asObject(response) {
+                    if (typeof response === 'string') {
+                        try {
+                            return JSON.parse(response);
+                        } catch (e) {
+                            return {};
+                        }
+                    }
+                    return response || {};
+                }
+
+                function pick(source, names) {
+                    for (var i = 0; i < names.length; i++) {
+                        if (source[names[i]] !== undefined && source[names[i]] !== null) {
+                            return source[names[i]];
+                        }
+                    }
+                    return null;
+                }
+
+                function setProgress(value, text) {
+                    progress.value = value;
+                    status.textContent = text;
+                    progressSection.classList.remove('hide');
+                }
 
                 function showResult(text, operationId, songs) {
                     summary.textContent = text;
@@ -76,7 +116,7 @@
                         var list = document.createElement('ul');
                         songs.slice(0, 20).forEach(function (song) {
                             var item = document.createElement('li');
-                            item.textContent = song.name + ' - ' + song.artist;
+                            item.textContent = (song.Name || song.name || '') + ' - ' + (song.Artist || song.artist || '');
                             list.appendChild(item);
                         });
                         unmatched.appendChild(list);
@@ -92,12 +132,17 @@
                     var body = {
                         Url: page.querySelector('#playlistUrl').value,
                         PlaylistName: page.querySelector('#playlistName').value || null,
-                        Public: page.querySelector('#playlistVisibility').value === 'true'
+                        Public: page.querySelector('#playlistPublic').checked
                     };
 
                     button.disabled = true;
                     result.classList.add('hide');
+                    setProgress(25, 'Fetching playlist');
                     Dashboard.showLoadingMsg();
+
+                    window.setTimeout(function () {
+                        if (button.disabled) setProgress(65, 'Matching songs');
+                    }, 800);
 
                     ApiClient.ajax({
                         type: 'POST',
@@ -105,11 +150,20 @@
                         data: JSON.stringify(body),
                         contentType: 'application/json'
                     }).then(function (response) {
+                        var importResult = asObject(response);
+                        var playlistName = pick(importResult, ['PlaylistName', 'playlistName']) || 'Imported playlist';
+                        var matchedCount = pick(importResult, ['MatchedCount', 'matchedCount']) || 0;
+                        var totalCount = pick(importResult, ['TotalCount', 'totalCount']) || 0;
+                        var unmatchedCount = pick(importResult, ['UnmatchedCount', 'unmatchedCount']) || 0;
+                        var operationId = pick(importResult, ['OperationId', 'operationId']);
+                        var unmatchedSongs = pick(importResult, ['UnmatchedSongs', 'unmatchedSongs']) || [];
+                        setProgress(90, 'Creating playlist');
                         showResult(
-                            response.PlaylistName + ': ' + response.MatchedCount + '/' + response.TotalCount + ' matched, ' + response.UnmatchedCount + ' unmatched.',
-                            response.OperationId,
-                            response.UnmatchedSongs
+                            playlistName + ': ' + matchedCount + '/' + totalCount + ' matched, ' + unmatchedCount + ' unmatched.',
+                            operationId,
+                            unmatchedSongs
                         );
+                        setProgress(100, 'Complete');
                     }).catch(function (error) {
                         var message = 'Import failed.';
                         if (error && error.responseJSON) {
@@ -118,6 +172,7 @@
                         } else {
                             showResult(message, '', null);
                         }
+                        setProgress(100, 'Failed');
                     }).finally(function () {
                         button.disabled = false;
                         Dashboard.hideLoadingMsg();
