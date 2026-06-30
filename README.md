@@ -9,7 +9,9 @@
 - 按歌名搜索 Jellyfin 音乐库。
 - 按艺人做基础匹配。
 - 创建 Jellyfin 歌单并添加匹配到的歌曲。
-- 提供 Jellyfin 管理后台导入页面。
+- 保存导入历史，并可按历史记录更新已创建的 Jellyfin 歌单。
+- 可单独删除导入历史，不删除 Jellyfin 歌单。
+- 提供 Jellyfin 管理后台操作页面。
 
 ## 在线安装
 
@@ -32,7 +34,7 @@ https://p1aintiff.github.io/jellyfin-plugin-netease-music/manifest.json
 powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 ```
 
-将 `dist\NetEaseMusicImporter-0.1.5.zip` 解压到 Jellyfin 插件目录。
+将 `dist\NetEaseMusicImporter-0.2.1.zip` 解压到 Jellyfin 插件目录。
 
 Windows：
 
@@ -67,11 +69,20 @@ build.yaml
 3. 输入网易云歌单 URL。
 4. 可选填写 Jellyfin 歌单名。
 5. 选择是否公开歌单。
-6. 点击 `Import playlist`。
+6. 选择是否保存导入历史，默认保存。
+7. 点击 `Import playlist`。
+
+## 导入历史
+
+- 导入历史显示已创建的歌单名称和网易云歌单链接。
+- 点击 `Update` 会按网易云歌单当前内容同步 Jellyfin 歌单。
+- 点击 `Delete cache` 只删除导入历史，不删除 Jellyfin 歌单。
 
 ## API
 
-接口需要 Jellyfin Token。
+以下仅用于手动调试接口。正常在 Jellyfin 管理后台页面使用时，不需要手动填写 Token。
+
+手动调用接口需要 Jellyfin Token：
 
 ```http
 Authorization: MediaBrowser Token="你的 API Token"
@@ -85,6 +96,7 @@ $body = @{
   Url = "https://music.163.com/m/playlist?id=13822175569"
   PlaylistName = "网易云歌单"
   Public = $true
+  SaveCache = $true
 } | ConvertTo-Json
 
 Invoke-RestMethod `
@@ -95,10 +107,22 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-获取当前用户：
+获取导入历史：
 
 ```text
-GET /NetEaseMusic/CurrentUser
+GET /NetEaseMusic/Imports
+```
+
+更新历史歌单：
+
+```text
+POST /NetEaseMusic/Imports/{playlistId}/Refresh
+```
+
+删除导入历史：
+
+```text
+DELETE /NetEaseMusic/Imports/{playlistId}
 ```
 
 ## 开发
@@ -121,9 +145,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 https://p1aintiff.github.io/jellyfin-plugin-netease-music/manifest.json
 ```
 
+## 版本信息
+
+- 插件仓库 manifest 的基础描述和版本更新说明维护在 `manifest-info.json`。
+- 发布新版本时，同步更新 `manifest-info.json` 中对应版本的 changelog。
+- GitHub Actions 会保留已发布 manifest 中的历史版本，并为当前版本生成新的包地址和校验值。
+
 ## 说明
 
-- 当前版本：`0.1.5`
+- 当前版本：`0.2.1`
 - 目标 Jellyfin ABI：`10.10.7.0`
 - 网易云抓取只使用 API 路径。
 - 歌曲匹配策略保持简单：歌名搜索 + 艺人匹配。

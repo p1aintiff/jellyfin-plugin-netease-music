@@ -33,11 +33,10 @@ jobs:
         run: |
           $project = "Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj"
           $projectXml = [xml](Get-Content $project)
+          $info = Get-Content "manifest-info.json" | ConvertFrom-Json
           $version = $projectXml.Project.PropertyGroup.Version
           $assemblyVersion = $projectXml.Project.PropertyGroup.AssemblyVersion
           $targetAbi = "10.10.7.0"
-          $pluginId = "a1b2c3d4-0000-4000-8000-000000000001"
-          $pluginName = "NetEase Music Importer"
           $repoName = "${{ github.event.repository.name }}"
           $owner = "${{ github.repository_owner }}"
           $baseUrl = "https://$owner.github.io/$repoName"
@@ -56,25 +55,61 @@ jobs:
           Compress-Archive -Path "$packageDir/*" -DestinationPath $zipPath -Force
           $checksum = (Get-FileHash $zipPath -Algorithm MD5).Hash.ToLowerInvariant()
           $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          $versions = @()
+          function Get-Changelog($version, $fallback) {
+            $entry = $info.changelog.PSObject.Properties[$version]
+            if ($entry) {
+              return $entry.Value
+            }
+
+            return $fallback
+          }
+
+          try {
+            $published = Invoke-RestMethod "$baseUrl/manifest.json"
+            foreach ($oldVersion in @($published[0].versions)) {
+              if ($oldVersion.version -eq $assemblyVersion) {
+                continue
+              }
+
+              $versions += [ordered]@{
+                version = $oldVersion.version
+                changelog = Get-Changelog $oldVersion.version $oldVersion.changelog
+                targetAbi = $oldVersion.targetAbi
+                sourceUrl = $oldVersion.sourceUrl
+                checksum = $oldVersion.checksum
+                timestamp = $oldVersion.timestamp
+              }
+
+              $oldZipName = Split-Path ([uri]$oldVersion.sourceUrl).AbsolutePath -Leaf
+              if ($oldZipName) {
+                Invoke-WebRequest $oldVersion.sourceUrl -OutFile "site/$oldZipName" -ErrorAction SilentlyContinue
+              }
+            }
+          } catch {
+            Write-Host "No existing manifest found. Publishing current version only."
+          }
+
+          $versions = @(
+            [ordered]@{
+              version = $assemblyVersion
+              changelog = Get-Changelog $assemblyVersion "Build $assemblyVersion."
+              targetAbi = $targetAbi
+              sourceUrl = "$baseUrl/$zipName"
+              checksum = $checksum
+              timestamp = $timestamp
+            }
+          ) + $versions
 
           $manifest = @(
             [ordered]@{
-              guid = $pluginId
-              name = $pluginName
-              description = "Import NetEase Cloud Music playlists into Jellyfin."
-              overview = "Import NetEase Cloud Music playlists into Jellyfin."
+              guid = $info.guid
+              name = $info.name
+              description = $info.description
+              overview = $info.overview
               owner = $owner
-              category = "Music"
-              versions = @(
-                [ordered]@{
-                  version = $assemblyVersion
-                  changelog = "Automated build from GitHub Actions."
-                  targetAbi = $targetAbi
-                  sourceUrl = "$baseUrl/$zipName"
-                  checksum = $checksum
-                  timestamp = $timestamp
-                }
-              )
+              category = $info.category
+              versions = $versions
             }
           )
 

@@ -4,7 +4,7 @@ version: "0.2.1.0"
 targetAbi: "10.10.7.0"
 framework: "net8.0"
 overview: "Import NetEase Cloud Music playlists into Jellyfin."
-description: "Import NetEase Cloud Music playlists into Jellyfin."
+description: "Import NetEase Cloud Music playlists, save import history, and refresh Jellyfin playlists from cached NetEase links."
 category: "Music"
 owner: "local"
 artifacts:
