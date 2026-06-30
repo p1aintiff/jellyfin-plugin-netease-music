@@ -24,7 +24,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         {
             new PluginPageInfo
             {
-                Name = "neteasemusic-v016",
+                Name = "neteasemusic-v018",
                 DisplayName = "NetEase Music",
                 EmbeddedResourcePath = GetType().Namespace + ".Web.configPage.html",
                 EnableInMainMenu = true,

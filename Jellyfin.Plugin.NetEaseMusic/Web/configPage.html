@@ -10,7 +10,7 @@
                 <form id="NetEaseMusicImportForm">
                     <div class="verticalSection">
                         <h2>NetEase Music</h2>
-                        <p>Page version: 0.1.6</p>
+                        <p>Page version: 0.1.8</p>
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
                         </div>
@@ -55,6 +55,18 @@
                 var operation = page.querySelector('#operationId');
                 var unmatched = page.querySelector('#unmatchedSongs');
                 function asObject(response) {
+                    if (response && response.responseJSON) {
+                        return response.responseJSON;
+                    }
+                    if (response && response.responseText) {
+                        return asObject(response.responseText);
+                    }
+                    if (response && response.Response) {
+                        return asObject(response.Response);
+                    }
+                    if (response && response.response) {
+                        return asObject(response.response);
+                    }
                     if (typeof response === 'string') {
                         try {
                             return JSON.parse(response);
@@ -72,6 +84,25 @@
                         }
                     }
                     return null;
+                }
+
+                function hasImportFields(source) {
+                    return source && (
+                        pick(source, ['PlaylistName', 'playlistName']) !== null ||
+                        pick(source, ['MatchedCount', 'matchedCount']) !== null ||
+                        pick(source, ['TotalCount', 'totalCount']) !== null ||
+                        pick(source, ['UnmatchedCount', 'unmatchedCount']) !== null
+                    );
+                }
+
+                function importResultFrom(args) {
+                    for (var i = 0; i < args.length; i++) {
+                        var value = asObject(args[i]);
+                        if (hasImportFields(value)) {
+                            return value;
+                        }
+                    }
+                    return asObject(args[0]);
                 }
 
                 function setProgress(value, text) {
@@ -125,9 +156,10 @@
                         type: 'POST',
                         url: ApiClient.getUrl('NetEaseMusic/Import'),
                         data: JSON.stringify(body),
-                        contentType: 'application/json'
-                    }).then(function (response) {
-                        var importResult = asObject(response);
+                        contentType: 'application/json',
+                        dataType: 'json'
+                    }).then(function () {
+                        var importResult = importResultFrom(arguments);
                         var playlistName = pick(importResult, ['PlaylistName', 'playlistName']) || 'Imported playlist';
                         var matchedCount = pick(importResult, ['MatchedCount', 'matchedCount']) || 0;
                         var totalCount = pick(importResult, ['TotalCount', 'totalCount']) || 0;
