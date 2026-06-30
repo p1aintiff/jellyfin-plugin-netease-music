@@ -149,7 +149,7 @@ https://p1aintiff.github.io/jellyfin-plugin-netease-music/manifest.json
 
 - 插件仓库 manifest 的基础描述和版本更新说明维护在 `manifest-info.json`。
 - 发布新版本时，同步更新 `manifest-info.json` 中对应版本的 changelog。
-- GitHub Actions 会保留已发布 manifest 中的历史版本，并为当前版本生成新的包地址和校验值。
+- GitHub Actions 会按 `manifest-info.json` 中存在对应 `v版本号` tag 的版本生成历史包，并为当前版本生成新的包地址和校验值。
 
 ## 说明
 

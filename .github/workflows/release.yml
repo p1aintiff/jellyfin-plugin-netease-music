@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -40,22 +42,8 @@ jobs:
           $repoName = "${{ github.event.repository.name }}"
           $owner = "${{ github.repository_owner }}"
           $baseUrl = "https://$owner.github.io/$repoName"
-
-          dotnet publish $project -c Release
-
-          $publish = "Jellyfin.Plugin.NetEaseMusic/bin/Release/net8.0/publish"
-          $packageDir = "site/NetEaseMusicImporter"
-          New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
-          Copy-Item "$publish/Jellyfin.Plugin.NetEaseMusic.dll" $packageDir
-          Copy-Item "$publish/Jellyfin.Plugin.NetEaseMusic.pdb" $packageDir
-          Copy-Item "build.yaml" $packageDir
-
-          $zipName = "NetEaseMusicImporter-$version.zip"
-          $zipPath = "site/$zipName"
-          Compress-Archive -Path "$packageDir/*" -DestinationPath $zipPath -Force
-          $checksum = (Get-FileHash $zipPath -Algorithm MD5).Hash.ToLowerInvariant()
-          $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
           $versions = @()
+
           function Get-Changelog($version, $fallback) {
             $entry = $info.changelog.PSObject.Properties[$version]
             if ($entry) {
@@ -65,33 +53,33 @@ jobs:
             return $fallback
           }
 
-          try {
-            $published = Invoke-RestMethod "$baseUrl/manifest.json"
-            foreach ($oldVersion in @($published[0].versions)) {
-              if ($oldVersion.version -eq $assemblyVersion) {
-                continue
-              }
-
-              $versions += [ordered]@{
-                version = $oldVersion.version
-                changelog = Get-Changelog $oldVersion.version $oldVersion.changelog
-                targetAbi = $oldVersion.targetAbi
-                sourceUrl = $oldVersion.sourceUrl
-                checksum = $oldVersion.checksum
-                timestamp = $oldVersion.timestamp
-              }
-
-              $oldZipName = Split-Path ([uri]$oldVersion.sourceUrl).AbsolutePath -Leaf
-              if ($oldZipName) {
-                Invoke-WebRequest $oldVersion.sourceUrl -OutFile "site/$oldZipName" -ErrorAction SilentlyContinue
-              }
+          function Get-PackageVersion($assemblyVersion) {
+            if ($assemblyVersion -match '^(\d+\.\d+\.\d+)\.0$') {
+              return $Matches[1]
             }
-          } catch {
-            Write-Host "No existing manifest found. Publishing current version only."
+
+            return $assemblyVersion
           }
 
-          $versions = @(
-            [ordered]@{
+          function New-PackageVersion($sourceDir, $version, $assemblyVersion) {
+            $projectPath = Join-Path $sourceDir "Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj"
+            dotnet publish $projectPath -c Release
+
+            $publish = Join-Path $sourceDir "Jellyfin.Plugin.NetEaseMusic/bin/Release/net8.0/publish"
+            $safeVersion = $version
+            $packageDir = "site/NetEaseMusicImporter-$safeVersion"
+            New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+            Copy-Item "$publish/Jellyfin.Plugin.NetEaseMusic.dll" $packageDir
+            Copy-Item "$publish/Jellyfin.Plugin.NetEaseMusic.pdb" $packageDir
+            Copy-Item (Join-Path $sourceDir "build.yaml") $packageDir
+
+            $zipName = "NetEaseMusicImporter-$safeVersion.zip"
+            $zipPath = "site/$zipName"
+            Compress-Archive -Path "$packageDir/*" -DestinationPath $zipPath -Force
+            $checksum = (Get-FileHash $zipPath -Algorithm MD5).Hash.ToLowerInvariant()
+            $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+            return [ordered]@{
               version = $assemblyVersion
               changelog = Get-Changelog $assemblyVersion "Build $assemblyVersion."
               targetAbi = $targetAbi
@@ -99,7 +87,29 @@ jobs:
               checksum = $checksum
               timestamp = $timestamp
             }
-          ) + $versions
+          }
+
+          New-Item -ItemType Directory -Force -Path "site" | Out-Null
+          $versions += New-PackageVersion "." $version $assemblyVersion
+
+          foreach ($entry in ($info.changelog.PSObject.Properties | Sort-Object { [version]$_.Name } -Descending)) {
+            if ($entry.Name -eq $assemblyVersion) {
+              continue
+            }
+
+            $tagVersion = Get-PackageVersion $entry.Name
+            $tag = "v$tagVersion"
+            git rev-parse --verify --quiet "$tag" | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Skip $($entry.Name): tag $tag not found."
+              continue
+            }
+
+            $workDir = "history/$tagVersion"
+            New-Item -ItemType Directory -Force -Path $workDir | Out-Null
+            git archive $tag --format=tar | tar -x -C $workDir
+            $versions += New-PackageVersion $workDir $tagVersion $entry.Name
+          }
 
           $manifest = @(
             [ordered]@{
