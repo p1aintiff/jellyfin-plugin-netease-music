@@ -99,8 +99,8 @@ jobs:
 
             $tagVersion = Get-PackageVersion $entry.Name
             $tag = "v$tagVersion"
-            git rev-parse --verify --quiet "$tag" | Out-Null
-            if ($LASTEXITCODE -ne 0) {
+            $tagExists = git tag --list $tag
+            if (-not $tagExists) {
               Write-Host "Skip $($entry.Name): tag $tag not found."
               continue
             }
