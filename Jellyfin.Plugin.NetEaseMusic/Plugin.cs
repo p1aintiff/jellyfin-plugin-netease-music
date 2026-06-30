@@ -12,8 +12,10 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
         : base(applicationPaths, xmlSerializer)
     {
+        Instance = this;
     }
 
+    public static Plugin? Instance { get; private set; }
     public override string Name => "NetEase Music Importer";
     public override string Description => "Import NetEase Cloud Music playlists into Jellyfin.";
     public override Guid Id => PluginId;
@@ -24,7 +26,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         {
             new PluginPageInfo
             {
-                Name = "neteasemusic-v018",
+                Name = "neteasemusic-v020",
                 DisplayName = "NetEase Music",
                 EmbeddedResourcePath = GetType().Namespace + ".Web.configPage.html",
                 EnableInMainMenu = true,

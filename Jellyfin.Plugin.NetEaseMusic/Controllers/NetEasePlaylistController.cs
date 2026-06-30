@@ -59,6 +59,68 @@ public class NetEasePlaylistController : ControllerBase
         };
     }
 
+    [HttpGet("Imports")]
+    public ActionResult<List<CachedImport>> Imports()
+    {
+        return Plugin.Instance?.Configuration.CachedImports ?? new List<CachedImport>();
+    }
+
+    [HttpDelete("Imports/{playlistId}")]
+    public IActionResult DeleteImport(string playlistId)
+    {
+        var plugin = Plugin.Instance;
+        if (plugin == null)
+            return StatusCode(500, new { error = "Plugin is not ready" });
+
+        plugin.Configuration.CachedImports.RemoveAll(x => x.JellyfinPlaylistId == playlistId);
+        plugin.SaveConfiguration();
+        return NoContent();
+    }
+
+    [HttpPost("Imports/{playlistId}/Refresh")]
+    public async Task<ActionResult<ImportResult>> RefreshImport(string playlistId, CancellationToken ct)
+    {
+        var operationId = NewOperationId();
+        var cache = Plugin.Instance?.Configuration.CachedImports
+            .FirstOrDefault(x => x.JellyfinPlaylistId == playlistId);
+        if (cache == null)
+            return NotFound(new { operationId, error = "Import cache not found" });
+
+        var user = await GetCurrentUser();
+        if (user == null)
+            return StatusCode(401, new { operationId, error = "No Jellyfin request user found" });
+
+        var playlist = _libraryManager.GetItemById(playlistId) as Playlist;
+        if (playlist == null)
+            return NotFound(new { operationId, error = "Jellyfin playlist not found" });
+
+        var importData = await BuildImportData(cache.NetEaseUrl, operationId, ct);
+        if (importData.Result != null)
+            return importData.Result;
+        var neteaseData = importData.NeteaseData!;
+
+        try
+        {
+            await SyncPlaylistInternal(playlist, importData.MatchedIds, user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to sync Jellyfin playlist");
+            return StatusCode(500, new { operationId, error = $"Failed to sync Jellyfin playlist: {ex.Message}" });
+        }
+
+        return new ImportResult
+        {
+            OperationId = operationId,
+            PlaylistId = playlistId,
+            PlaylistName = playlist.Name,
+            MatchedCount = importData.MatchedIds.Count,
+            UnmatchedCount = importData.Unmatched.Count,
+            TotalCount = neteaseData.Songs.Count,
+            UnmatchedSongs = importData.Unmatched
+        };
+    }
+
     /// <summary>
     /// Import a NetEase Cloud Music playlist by URL into Jellyfin.
     /// </summary>
@@ -75,8 +137,6 @@ public class NetEasePlaylistController : ControllerBase
 
         _logger.LogInformation("Import request started");
 
-        _logger.LogInformation("Import request URL length is {Length}", request.Url.Length);
-
         if (string.IsNullOrWhiteSpace(request.Url) ||
             !request.Url.Contains("music.163.com"))
         {
@@ -84,17 +144,70 @@ public class NetEasePlaylistController : ControllerBase
             return BadRequest(new { error = "Invalid NetEase playlist URL" });
         }
 
+        _logger.LogInformation("Import request URL length is {Length}", request.Url.Length);
+
+        var importData = await BuildImportData(request.Url, operationId, ct);
+        if (importData.Result != null)
+            return importData.Result;
+        var neteaseData = importData.NeteaseData!;
+
+        // 3. Get a user for ownership
+        var user = await GetCurrentUser();
+        if (user == null)
+        {
+            _logger.LogError("Import failed: no Jellyfin request user found");
+            return StatusCode(401, new { operationId, error = "No Jellyfin request user found" });
+        }
+
+        // 4. Create the playlist
+        var playlistName = request.PlaylistName ?? neteaseData.Name;
+        ImportPlaylistResult playlist;
+        try
+        {
+            playlist = await CreatePlaylistInternal(playlistName, importData.MatchedIds, user, request.Public);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Jellyfin playlist");
+            return StatusCode(500, new { operationId, error = $"Failed to create Jellyfin playlist: {ex.Message}" });
+        }
+
+        _logger.LogInformation("Created playlist '{Name}' ({Id}) with {Count} songs",
+            playlistName, playlist.PlaylistId, importData.MatchedIds.Count);
+
+        if (request.SaveCache)
+        {
+            SaveImportCache(request.Url, playlist.PlaylistId);
+        }
+
+        return new ImportResult
+        {
+            OperationId = operationId,
+            PlaylistId = playlist.PlaylistId,
+            PlaylistName = playlistName,
+            MatchedCount = importData.MatchedIds.Count,
+            UnmatchedCount = importData.Unmatched.Count,
+            TotalCount = neteaseData.Songs.Count,
+            UnmatchedSongs = importData.Unmatched
+        };
+    }
+
+    private async Task<ImportData> BuildImportData(string url, string operationId, CancellationToken ct)
+    {
         // 1. Scrape the playlist
         NetEasePlaylistData neteaseData;
         try
         {
             _logger.LogInformation("Scraping NetEase playlist started");
-            neteaseData = await _scraper.ScrapePlaylistAsync(request.Url, ct);
+            neteaseData = await _scraper.ScrapePlaylistAsync(url, ct);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to scrape NetEase playlist");
-            return StatusCode(502, new { operationId, error = $"Failed to scrape NetEase playlist: {ex.Message}" });
+            return new ImportData
+            {
+                Result = StatusCode(502, new { operationId, error = $"Failed to scrape NetEase playlist: {ex.Message}" })
+            };
         }
 
         _logger.LogInformation("Scraped playlist '{Name}' with {Count} songs",
@@ -130,39 +243,11 @@ public class NetEasePlaylistController : ControllerBase
 
         _logger.LogInformation("Matched {Matched}/{Total} songs", matchedIds.Count, neteaseData.Songs.Count);
 
-        // 3. Get a user for ownership
-        var user = await GetCurrentUser();
-        if (user == null)
+        return new ImportData
         {
-            _logger.LogError("Import failed: no Jellyfin request user found");
-            return StatusCode(401, new { operationId, error = "No Jellyfin request user found" });
-        }
-
-        // 4. Create the playlist
-        var playlistName = request.PlaylistName ?? neteaseData.Name;
-        ImportPlaylistResult playlist;
-        try
-        {
-            playlist = await CreatePlaylistInternal(playlistName, matchedIds, user, request.Public);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Jellyfin playlist");
-            return StatusCode(500, new { operationId, error = $"Failed to create Jellyfin playlist: {ex.Message}" });
-        }
-
-        _logger.LogInformation("Created playlist '{Name}' ({Id}) with {Count} songs",
-            playlistName, playlist.PlaylistId, matchedIds.Count);
-
-        return new ImportResult
-        {
-            OperationId = operationId,
-            PlaylistId = playlist.PlaylistId,
-            PlaylistName = playlistName,
-            MatchedCount = matchedIds.Count,
-            UnmatchedCount = unmatched.Count,
-            TotalCount = neteaseData.Songs.Count,
-            UnmatchedSongs = unmatched
+            NeteaseData = neteaseData,
+            MatchedIds = matchedIds,
+            Unmatched = unmatched
         };
     }
 
@@ -202,6 +287,45 @@ public class NetEasePlaylistController : ControllerBase
         };
     }
 
+    private async Task SyncPlaylistInternal(Playlist playlist, List<string> songItemIds, User user)
+    {
+        var itemIds = songItemIds
+            .Where(id => Guid.TryParse(id, out _))
+            .Select(Guid.Parse)
+            .ToList();
+        var playlistId = playlist.Id.ToString();
+        var existingIds = playlist.GetLinkedChildrenInfos()
+            .Select(x => x.Item1.ItemId?.ToString("N"))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!)
+            .ToList();
+
+        if (existingIds.Count > 0)
+        {
+            await _playlistManager.RemoveItemFromPlaylistAsync(playlistId, existingIds);
+        }
+
+        if (itemIds.Count > 0)
+        {
+            await _playlistManager.AddItemToPlaylistAsync(playlist.Id, itemIds, user.Id);
+        }
+    }
+
+    private static void SaveImportCache(string url, string playlistId)
+    {
+        var plugin = Plugin.Instance;
+        if (plugin == null)
+            return;
+
+        plugin.Configuration.CachedImports.RemoveAll(x => x.JellyfinPlaylistId == playlistId);
+        plugin.Configuration.CachedImports.Add(new CachedImport
+        {
+            NetEaseUrl = url,
+            JellyfinPlaylistId = playlistId
+        });
+        plugin.SaveConfiguration();
+    }
+
     private async Task<User?> GetCurrentUser()
     {
         var authorization = await _authorizationContext.GetAuthorizationInfo(Request);
@@ -211,5 +335,13 @@ public class NetEasePlaylistController : ControllerBase
     private static string NewOperationId()
     {
         return Guid.NewGuid().ToString("N")[..12];
+    }
+
+    private class ImportData
+    {
+        public NetEasePlaylistData? NeteaseData { get; set; }
+        public List<string> MatchedIds { get; set; } = new();
+        public List<UnmatchedSong> Unmatched { get; set; } = new();
+        public ActionResult<ImportResult>? Result { get; set; }
     }
 }

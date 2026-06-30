@@ -10,7 +10,7 @@
                 <form id="NetEaseMusicImportForm">
                     <div class="verticalSection">
                         <h2>NetEase Music</h2>
-                        <p>Page version: 0.1.8</p>
+                        <p>Page version: 0.2.0</p>
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
                         </div>
@@ -21,6 +21,12 @@
                             <label>
                                 <input is="emby-checkbox" id="playlistPublic" type="checkbox" checked />
                                 <span>Public playlist</span>
+                            </label>
+                        </div>
+                        <div class="checkboxContainer">
+                            <label>
+                                <input is="emby-checkbox" id="saveCache" type="checkbox" checked />
+                                <span>Save import history</span>
                             </label>
                         </div>
                         <button is="emby-button" type="submit" class="raised button-submit block">
@@ -41,6 +47,11 @@
                     <p id="operationId"></p>
                     <div id="unmatchedSongs"></div>
                 </div>
+
+                <div id="NetEaseMusicImports" class="verticalSection">
+                    <h2>Import history</h2>
+                    <div id="importHistory"></div>
+                </div>
             </div>
         </div>
         <script>
@@ -54,6 +65,7 @@
                 var summary = page.querySelector('#importSummary');
                 var operation = page.querySelector('#operationId');
                 var unmatched = page.querySelector('#unmatchedSongs');
+                var importHistory = page.querySelector('#importHistory');
                 function asObject(response) {
                     if (response && response.responseJSON) {
                         return response.responseJSON;
@@ -105,6 +117,13 @@
                     return asObject(args[0]);
                 }
 
+                function ajax(options) {
+                    options.dataType = 'json';
+                    return ApiClient.ajax(options).then(function () {
+                        return importResultFrom(arguments);
+                    });
+                }
+
                 function setProgress(value, text) {
                     progress.value = value;
                     status.textContent = text;
@@ -133,6 +152,98 @@
                     result.classList.remove('hide');
                 }
 
+                function renderImports(items) {
+                    importHistory.innerHTML = '';
+                    if (!items || !items.length) {
+                        importHistory.textContent = 'No import history.';
+                        return;
+                    }
+
+                    items.forEach(function (item) {
+                        var row = document.createElement('div');
+                        row.style.marginBottom = '1em';
+
+                        var url = document.createElement('div');
+                        url.textContent = item.NetEaseUrl || item.netEaseUrl || '';
+                        row.appendChild(url);
+
+                        var playlistId = item.JellyfinPlaylistId || item.jellyfinPlaylistId || '';
+                        var id = document.createElement('div');
+                        id.textContent = 'Jellyfin playlist: ' + playlistId;
+                        row.appendChild(id);
+
+                        var update = document.createElement('button');
+                        update.setAttribute('is', 'emby-button');
+                        update.className = 'raised';
+                        update.type = 'button';
+                        update.textContent = 'Update';
+                        update.addEventListener('click', function () {
+                            update.disabled = true;
+                            setProgress(25, 'Fetching playlist');
+                            ajax({
+                                type: 'POST',
+                                url: ApiClient.getUrl('NetEaseMusic/Imports/' + encodeURIComponent(playlistId) + '/Refresh')
+                            }).then(function (importResult) {
+                                setProgress(90, 'Syncing playlist');
+                                showImportResult(importResult);
+                                setProgress(100, 'Complete');
+                            }).catch(function (error) {
+                                showError(error);
+                                setProgress(100, 'Failed');
+                            }).finally(function () {
+                                update.disabled = false;
+                            });
+                        });
+                        row.appendChild(update);
+
+                        var remove = document.createElement('button');
+                        remove.setAttribute('is', 'emby-button');
+                        remove.className = 'raised';
+                        remove.type = 'button';
+                        remove.textContent = 'Delete cache';
+                        remove.addEventListener('click', function () {
+                            remove.disabled = true;
+                            ApiClient.ajax({
+                                type: 'DELETE',
+                                url: ApiClient.getUrl('NetEaseMusic/Imports/' + encodeURIComponent(playlistId))
+                            }).then(loadImports).finally(function () {
+                                remove.disabled = false;
+                            });
+                        });
+                        row.appendChild(remove);
+
+                        importHistory.appendChild(row);
+                    });
+                }
+
+                function loadImports() {
+                    ajax({
+                        type: 'GET',
+                        url: ApiClient.getUrl('NetEaseMusic/Imports')
+                    }).then(renderImports).catch(function () {
+                        importHistory.textContent = 'Failed to load import history.';
+                    });
+                }
+
+                function showImportResult(importResult) {
+                    var playlistName = pick(importResult, ['PlaylistName', 'playlistName']) || 'Imported playlist';
+                    var matchedCount = pick(importResult, ['MatchedCount', 'matchedCount']) || 0;
+                    var totalCount = pick(importResult, ['TotalCount', 'totalCount']) || 0;
+                    var unmatchedCount = pick(importResult, ['UnmatchedCount', 'unmatchedCount']) || 0;
+                    var operationId = pick(importResult, ['OperationId', 'operationId']);
+                    var unmatchedSongs = pick(importResult, ['UnmatchedSongs', 'unmatchedSongs']) || [];
+                    showResult(
+                        playlistName + ': ' + matchedCount + '/' + totalCount + ' matched, ' + unmatchedCount + ' unmatched.',
+                        operationId,
+                        unmatchedSongs
+                    );
+                }
+
+                function showError(error) {
+                    var body = asObject(error && (error.responseJSON || error.responseText)) || {};
+                    showResult(body.error || 'Import failed.', body.operationId, null);
+                }
+
                 form.addEventListener('submit', function (event) {
                     event.preventDefault();
 
@@ -140,7 +251,8 @@
                     var body = {
                         Url: page.querySelector('#playlistUrl').value,
                         PlaylistName: page.querySelector('#playlistName').value || null,
-                        Public: page.querySelector('#playlistPublic').checked
+                        Public: page.querySelector('#playlistPublic').checked,
+                        SaveCache: page.querySelector('#saveCache').checked
                     };
 
                     button.disabled = true;
@@ -152,41 +264,25 @@
                         if (button.disabled) setProgress(65, 'Matching songs');
                     }, 800);
 
-                    ApiClient.ajax({
+                    ajax({
                         type: 'POST',
                         url: ApiClient.getUrl('NetEaseMusic/Import'),
                         data: JSON.stringify(body),
-                        contentType: 'application/json',
-                        dataType: 'json'
-                    }).then(function () {
-                        var importResult = importResultFrom(arguments);
-                        var playlistName = pick(importResult, ['PlaylistName', 'playlistName']) || 'Imported playlist';
-                        var matchedCount = pick(importResult, ['MatchedCount', 'matchedCount']) || 0;
-                        var totalCount = pick(importResult, ['TotalCount', 'totalCount']) || 0;
-                        var unmatchedCount = pick(importResult, ['UnmatchedCount', 'unmatchedCount']) || 0;
-                        var operationId = pick(importResult, ['OperationId', 'operationId']);
-                        var unmatchedSongs = pick(importResult, ['UnmatchedSongs', 'unmatchedSongs']) || [];
+                        contentType: 'application/json'
+                    }).then(function (importResult) {
                         setProgress(90, 'Creating playlist');
-                        showResult(
-                            playlistName + ': ' + matchedCount + '/' + totalCount + ' matched, ' + unmatchedCount + ' unmatched.',
-                            operationId,
-                            unmatchedSongs
-                        );
+                        showImportResult(importResult);
                         setProgress(100, 'Complete');
+                        loadImports();
                     }).catch(function (error) {
-                        var message = 'Import failed.';
-                        if (error && error.responseJSON) {
-                            message = error.responseJSON.error || message;
-                            showResult(message, error.responseJSON.operationId, null);
-                        } else {
-                            showResult(message, '', null);
-                        }
+                        showError(error);
                         setProgress(100, 'Failed');
                     }).finally(function () {
                         button.disabled = false;
                         Dashboard.hideLoadingMsg();
                     });
                 });
+                loadImports();
             })();
         </script>
     </div>
