@@ -1,56 +1,58 @@
-# Jellyfin NetEase Music Importer
+# Jellyfin 网易云音乐歌单导入插件
 
-Import NetEase Cloud Music playlists into a Jellyfin music library.
+把网易云音乐歌单导入 Jellyfin 音乐库。
 
-## Features
+## 功能
 
-- Fetch NetEase playlist metadata by playlist URL.
-- Complete track details through NetEase `trackIds`.
-- Match Jellyfin audio items by song title and artist.
-- Create a Jellyfin playlist and add matched songs.
-- Provide a Jellyfin dashboard import page.
+- 通过网易云歌单 URL 获取歌单信息。
+- 通过 `trackIds` 批量补全歌曲详情。
+- 按歌名搜索 Jellyfin 音乐库。
+- 按艺人做基础匹配。
+- 创建 Jellyfin 歌单并添加匹配到的歌曲。
+- 提供 Jellyfin 管理后台导入页面。
 
-## Online Install
+## 在线安装
 
-1. Open Jellyfin dashboard.
-2. Go to `Plugins` -> `Repositories`.
-3. Add this repository URL:
+1. 打开 Jellyfin 管理后台。
+2. 进入 `插件` -> `存储库`。
+3. 添加插件仓库地址：
 
 ```text
-https://<github-user>.github.io/<repo>/manifest.json
+https://p1aintiff.github.io/jellyfin-plugin-netease-music/manifest.json
 ```
 
-4. Open `Catalog`, install `NetEase Music Importer`, then restart Jellyfin.
+4. 进入 `目录`，安装 `NetEase Music Importer`。
+5. 重启 Jellyfin。
 
-## Manual Install
+## 手动安装
 
-Build the package:
+构建插件包：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 ```
 
-Install `dist\NetEaseMusicImporter-0.1.5.zip` into the Jellyfin plugin directory.
+将 `dist\NetEaseMusicImporter-0.1.5.zip` 解压到 Jellyfin 插件目录。
 
-Windows:
+Windows：
 
 ```text
 %ProgramData%\Jellyfin\Server\plugins\NetEaseMusicImporter\
 ```
 
-Linux:
+Linux：
 
 ```text
 /var/lib/jellyfin/plugins/NetEaseMusicImporter/
 ```
 
-Docker:
+Docker：
 
 ```text
 /config/plugins/NetEaseMusicImporter/
 ```
 
-The plugin directory should contain:
+插件目录内应包含：
 
 ```text
 Jellyfin.Plugin.NetEaseMusic.dll
@@ -58,30 +60,30 @@ Jellyfin.Plugin.NetEaseMusic.pdb
 build.yaml
 ```
 
-## Usage
+## 使用
 
-1. Open Jellyfin dashboard.
-2. Open `NetEase Music`.
-3. Enter a NetEase playlist URL.
-4. Optionally enter a Jellyfin playlist name.
-5. Choose whether the playlist is public.
-6. Click `Import playlist`.
+1. 打开 Jellyfin 管理后台。
+2. 打开 `NetEase Music` 页面。
+3. 输入网易云歌单 URL。
+4. 可选填写 Jellyfin 歌单名。
+5. 选择是否公开歌单。
+6. 点击 `Import playlist`。
 
 ## API
 
-The API requires a Jellyfin token.
+接口需要 Jellyfin Token。
 
 ```http
-Authorization: MediaBrowser Token="your API token"
+Authorization: MediaBrowser Token="你的 API Token"
 ```
 
-Import a playlist:
+导入歌单：
 
 ```powershell
-$headers = @{ Authorization = 'MediaBrowser Token="your API token"' }
+$headers = @{ Authorization = 'MediaBrowser Token="你的 API Token"' }
 $body = @{
   Url = "https://music.163.com/m/playlist?id=13822175569"
-  PlaylistName = "NetEase Playlist"
+  PlaylistName = "网易云歌单"
   Public = $true
 } | ConvertTo-Json
 
@@ -93,22 +95,35 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-Current user check:
+获取当前用户：
 
 ```text
 GET /NetEaseMusic/CurrentUser
 ```
 
-## Development
+## 开发
 
 ```powershell
 dotnet build .\JellyfinMusic.slnx
 powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 ```
 
-## Notes
+## 自动编译
 
-- Current version: `0.1.5`
-- Target Jellyfin ABI: `10.10.7.0`
-- The NetEase scraper uses API endpoints only.
-- Song matching is intentionally simple: title search plus artist match.
+仓库已配置 GitHub Actions：
+
+- 推送到 `main` 会自动构建插件。
+- 在 GitHub 页面进入 `Actions` -> `Build plugin repository` -> `Run workflow` 可手动触发。
+- 构建成功后会发布 GitHub Pages。
+- Jellyfin 在线安装地址为：
+
+```text
+https://p1aintiff.github.io/jellyfin-plugin-netease-music/manifest.json
+```
+
+## 说明
+
+- 当前版本：`0.1.5`
+- 目标 Jellyfin ABI：`10.10.7.0`
+- 网易云抓取只使用 API 路径。
+- 歌曲匹配策略保持简单：歌名搜索 + 艺人匹配。
