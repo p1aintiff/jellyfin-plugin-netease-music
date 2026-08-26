@@ -5,6 +5,7 @@
   "description": "Import NetEase Cloud Music playlists, save import history, and refresh Jellyfin playlists from cached NetEase links.",
   "category": "Music",
   "changelog": {
+    "0.2.2.0": "优化 NetEase Music 管理页面布局、状态反馈和移动端显示。",
     "0.2.1.0": "优化导入历史显示，隐藏 Jellyfin 歌单 ID，仅显示歌单名称和网易云链接。",
     "0.2.0.0": "新增导入历史缓存、按历史更新歌单、删除缓存。",
     "0.1.8.0": "修复导入结果解析。",
