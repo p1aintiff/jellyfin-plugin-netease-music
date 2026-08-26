@@ -121,6 +121,7 @@ jobs:
               name = $info.name
               description = $info.description
               overview = $info.overview
+              imageUrl = $info.imageUrl
               owner = $owner
               category = $info.category
               versions = $versions

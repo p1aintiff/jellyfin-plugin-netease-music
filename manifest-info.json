@@ -3,6 +3,7 @@
   "name": "NetEase Music Importer",
   "overview": "Import NetEase Cloud Music playlists into Jellyfin.",
   "description": "Import NetEase Cloud Music playlists, save import history, and refresh Jellyfin playlists from cached NetEase links.",
+  "imageUrl": "https://raw.githubusercontent.com/p1aintiff/jellyfin-plugin-netease-music/main/assets/netease-music.png",
   "category": "Music",
   "changelog": {
     "0.2.2.0": "优化 NetEase Music 管理页面布局、状态反馈和移动端显示。",
