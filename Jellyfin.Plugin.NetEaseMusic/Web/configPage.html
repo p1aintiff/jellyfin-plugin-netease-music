@@ -2,53 +2,90 @@
 <html>
 <head>
     <title>NetEase Music</title>
+    <style>
+        #NetEaseMusicPage .nem-shell { max-width: 980px; margin: 0 auto; }
+        #NetEaseMusicPage .nem-hero { position: relative; overflow: hidden; padding: 2.2em 2.4em; border-radius: 18px; background: linear-gradient(135deg, #3c235f, #7c3aed 55%, #db2777); color: #fff; box-shadow: 0 14px 35px rgba(56, 189, 248, .12); }
+        #NetEaseMusicPage .nem-hero:after { content: ''; position: absolute; width: 220px; height: 220px; right: -70px; top: -90px; border-radius: 50%; background: rgba(255,255,255,.12); }
+        #NetEaseMusicPage .nem-eyebrow { position: relative; z-index: 1; margin: 0 0 .45em; color: rgba(255,255,255,.78); font-size: .82em; letter-spacing: .12em; text-transform: uppercase; }
+        #NetEaseMusicPage .nem-hero h1 { position: relative; z-index: 1; margin: 0; font-size: 2em; }
+        #NetEaseMusicPage .nem-hero p { position: relative; z-index: 1; max-width: 620px; margin: .7em 0 0; color: rgba(255,255,255,.88); }
+        #NetEaseMusicPage .nem-card { margin-top: 1.4em; padding: 1.6em; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(30,30,35,.38); }
+        #NetEaseMusicPage .nem-card h2 { margin-top: 0; }
+        #NetEaseMusicPage .nem-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 1.2em; }
+        #NetEaseMusicPage .nem-form-grid .nem-wide { grid-column: 1 / -1; }
+        #NetEaseMusicPage .nem-options { display: flex; flex-wrap: wrap; gap: .7em 1.5em; margin: .5em 0 1.4em; }
+        #NetEaseMusicPage .nem-option { display: flex; align-items: center; gap: .45em; }
+        #NetEaseMusicPage .nem-submit { width: 100%; margin-top: .3em; }
+        #NetEaseMusicPage .nem-progress { height: 8px; overflow: hidden; border-radius: 99px; }
+        #NetEaseMusicPage .nem-status { margin: .8em 0 0; color: rgba(255,255,255,.75); }
+        #NetEaseMusicPage .nem-result-summary { margin: 0; font-size: 1.1em; font-weight: 600; }
+        #NetEaseMusicPage .nem-operation { color: rgba(255,255,255,.6); font-size: .85em; }
+        #NetEaseMusicPage .nem-history-empty { padding: 1.4em; border: 1px dashed rgba(255,255,255,.2); border-radius: 10px; text-align: center; color: rgba(255,255,255,.62); }
+        #NetEaseMusicPage .nem-history-row { display: flex; align-items: center; justify-content: space-between; gap: 1em; padding: 1em 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+        #NetEaseMusicPage .nem-history-row:last-child { border-bottom: 0; }
+        #NetEaseMusicPage .nem-history-info { min-width: 0; flex: 1; }
+        #NetEaseMusicPage .nem-history-name { margin-bottom: .3em; font-weight: 600; }
+        #NetEaseMusicPage .nem-history-url { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,255,255,.62); font-size: .88em; }
+        #NetEaseMusicPage .nem-history-actions { display: flex; flex-shrink: 0; gap: .5em; }
+        #NetEaseMusicPage .nem-danger { --button-background: rgba(190, 55, 75, .18); }
+        @media (max-width: 650px) { #NetEaseMusicPage .nem-hero { padding: 1.6em; } #NetEaseMusicPage .nem-form-grid { display: block; } #NetEaseMusicPage .nem-history-row { align-items: stretch; flex-direction: column; } #NetEaseMusicPage .nem-history-actions button { flex: 1; } }
+    </style>
 </head>
 <body>
     <div id="NetEaseMusicPage" data-role="page" class="page type-interior pluginConfigurationPage">
         <div data-role="content">
-            <div class="content-primary">
+            <div class="content-primary nem-shell">
+                <section class="nem-hero">
+                    <p class="nem-eyebrow">Jellyfin plugin · v0.2.1</p>
+                    <h1>NetEase Music Importer</h1>
+                    <p>Bring your favorite NetEase Cloud Music playlists into your Jellyfin library in a few clicks.</p>
+                </section>
                 <form id="NetEaseMusicImportForm">
-                    <div class="verticalSection">
-                        <h2>NetEase Music</h2>
-                        <p>Page version: 0.2.1</p>
-                        <div class="inputContainer">
+                    <div class="verticalSection nem-card">
+                        <h2>Import a playlist</h2>
+                        <p>Paste a public NetEase playlist link to get started.</p>
+                        <div class="nem-form-grid">
+                        <div class="inputContainer nem-wide">
                             <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
                         </div>
                         <div class="inputContainer">
                             <input is="emby-input" id="playlistName" name="playlistName" type="text" label="Jellyfin playlist name" />
                         </div>
-                        <div class="checkboxContainer">
+                        </div>
+                        <div class="nem-options">
+                        <div class="checkboxContainer nem-option">
                             <label>
                                 <input is="emby-checkbox" id="playlistPublic" type="checkbox" checked />
                                 <span>Public playlist</span>
                             </label>
                         </div>
-                        <div class="checkboxContainer">
+                        <div class="checkboxContainer nem-option">
                             <label>
                                 <input is="emby-checkbox" id="saveCache" type="checkbox" checked />
                                 <span>Save import history</span>
                             </label>
                         </div>
-                        <button is="emby-button" type="submit" class="raised button-submit block">
+                        </div>
+                        <button is="emby-button" type="submit" class="raised button-submit block nem-submit">
                             <span>Import playlist</span>
                         </button>
                     </div>
                 </form>
 
-                <div id="NetEaseMusicProgress" class="verticalSection hide">
+                <div id="NetEaseMusicProgress" class="verticalSection nem-card hide">
                     <h2>Status</h2>
-                    <progress id="importProgress" max="100" value="0" style="width:100%"></progress>
-                    <p id="importStatus"></p>
+                    <progress id="importProgress" class="nem-progress" max="100" value="0" style="width:100%"></progress>
+                    <p id="importStatus" class="nem-status"></p>
                 </div>
 
-                <div id="NetEaseMusicResult" class="verticalSection hide">
+                <div id="NetEaseMusicResult" class="verticalSection nem-card hide">
                     <h2>Result</h2>
-                    <p id="importSummary"></p>
-                    <p id="operationId"></p>
+                    <p id="importSummary" class="nem-result-summary"></p>
+                    <p id="operationId" class="nem-operation"></p>
                     <div id="unmatchedSongs"></div>
                 </div>
 
-                <div id="NetEaseMusicImports" class="verticalSection">
+                <div id="NetEaseMusicImports" class="verticalSection nem-card">
                     <h2>Import history</h2>
                     <div id="importHistory"></div>
                 </div>
@@ -155,7 +192,10 @@
                 function renderImports(items) {
                     importHistory.innerHTML = '';
                     if (!items || !items.length) {
-                        importHistory.textContent = 'No import history.';
+                        var empty = document.createElement('div');
+                        empty.className = 'nem-history-empty';
+                        empty.textContent = 'No import history yet. Your saved imports will appear here.';
+                        importHistory.appendChild(empty);
                         return;
                     }
 
@@ -165,23 +205,14 @@
                         var playlistName = item.PlaylistName || item.playlistName || 'Playlist not found';
 
                         var row = document.createElement('div');
-                        row.style.border = '1px solid rgba(255,255,255,.16)';
-                        row.style.borderRadius = '8px';
-                        row.style.padding = '1em';
-                        row.style.marginBottom = '1em';
-                        row.style.display = 'flex';
-                        row.style.justifyContent = 'space-between';
-                        row.style.gap = '1em';
-                        row.style.alignItems = 'center';
+                        row.className = 'nem-history-row';
 
                         var info = document.createElement('div');
-                        info.style.minWidth = '0';
-                        info.style.flex = '1';
+                        info.className = 'nem-history-info';
 
                         var name = document.createElement('div');
                         name.textContent = playlistName;
-                        name.style.fontWeight = '600';
-                        name.style.marginBottom = '.35em';
+                        name.className = 'nem-history-name';
                         info.appendChild(name);
 
                         var url = document.createElement('a');
@@ -189,18 +220,13 @@
                         url.target = '_blank';
                         url.rel = 'noopener noreferrer';
                         url.textContent = neteaseUrl;
-                        url.style.display = 'block';
-                        url.style.overflow = 'hidden';
-                        url.style.textOverflow = 'ellipsis';
-                        url.style.whiteSpace = 'nowrap';
+                        url.className = 'nem-history-url';
                         info.appendChild(url);
 
                         row.appendChild(info);
 
                         var actions = document.createElement('div');
-                        actions.style.display = 'flex';
-                        actions.style.gap = '.5em';
-                        actions.style.flexShrink = '0';
+                        actions.className = 'nem-history-actions';
 
                         var update = document.createElement('button');
                         update.setAttribute('is', 'emby-button');
@@ -228,7 +254,7 @@
 
                         var remove = document.createElement('button');
                         remove.setAttribute('is', 'emby-button');
-                        remove.className = 'raised';
+                        remove.className = 'raised nem-danger';
                         remove.type = 'button';
                         remove.textContent = 'Delete cache';
                         remove.addEventListener('click', function () {
