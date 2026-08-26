@@ -6,6 +6,7 @@
   "imageUrl": "https://raw.githubusercontent.com/p1aintiff/jellyfin-plugin-netease-music/main/assets/netease-music.png",
   "category": "Music",
   "changelog": {
+    "0.2.3.0": "新增插件目录封面图，并完善插件仓库图标元数据。",
     "0.2.2.0": "优化 NetEase Music 管理页面布局、状态反馈和移动端显示。",
     "0.2.1.0": "优化导入历史显示，隐藏 Jellyfin 歌单 ID，仅显示歌单名称和网易云链接。",
     "0.2.0.0": "新增导入历史缓存、按历史更新歌单、删除缓存。",
