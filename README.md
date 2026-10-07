@@ -34,7 +34,7 @@ https://p1aintiff.github.io/jellyfin-plugin-netease-music/manifest.json
 powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 ```
 
-将 `dist\NetEaseMusicImporter-0.2.1.zip` 解压到 Jellyfin 插件目录。
+从 [GitHub Releases](https://github.com/p1aintiff/jellyfin-plugin-netease-music/releases) 下载插件包，或使用本地构建的 `dist\NetEaseMusicImporter-0.2.3.zip`，解压到 Jellyfin 插件目录。
 
 Windows：
 
@@ -135,13 +135,15 @@ dotnet build .\JellyfinMusic.slnx
 powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 ```
 
-## 自动编译
+## 发布版本
 
 仓库已配置 GitHub Actions：
 
-- 推送到 `main` 会自动构建插件。
-- 在 GitHub 页面进入 `Actions` -> `Build plugin repository` -> `Run workflow` 可手动触发。
-- 构建成功后会发布 GitHub Pages。
+- 推送 `v版本号` 标签（如 `v0.2.3`）会构建插件并创建 GitHub Release。
+- Release 保存插件 ZIP、版本说明和插件目录快照 `manifest.json`；GitHub Pages 只托管在线安装目录。
+- 普通 `main` 提交不再发布，避免相同版本号对应不同安装包。
+- 需要重试时，在 `Actions` -> `Release plugin` -> `Run workflow` 中选择对应版本标签。已发布的 Release 会直接复用目录快照，不会重新构建或覆盖安装包。
+- 首次切换发布方式时，将现有 Pages 历史安装包原样迁移到该次 Release 附件中，保留历史版本和校验值。
 - Jellyfin 在线安装地址为：
 
 ```text
@@ -151,12 +153,19 @@ https://p1aintiff.github.io/jellyfin-plugin-netease-music/manifest.json
 ## 版本信息
 
 - 插件仓库 manifest 的基础描述和版本更新说明维护在 `manifest-info.json`。
-- 发布新版本时，同步更新 `manifest-info.json` 中对应版本的 changelog。
-- GitHub Actions 会按 `manifest-info.json` 中存在对应 `v版本号` tag 的版本生成历史包，并为当前版本生成新的包地址和校验值。
+- 发布新版本时，同步更新项目的 `Version`、`AssemblyVersion`、`FileVersion`，以及 `build.yaml` 的版本和 `manifest-info.json` 的 changelog。
+- 提交并推送 `main` 后，创建与项目版本一致的标签并推送：
+
+```powershell
+git tag v0.2.3
+git push origin v0.2.3
+```
+
+- GitHub Actions 会校验版本一致性；新目录沿用已发布历史版本的下载地址，不会重新构建历史安装包。
 
 ## 说明
 
-- 当前版本：`0.2.1`
+- 当前版本：`0.2.3`
 - 目标 Jellyfin ABI：`10.10.7.0`
 - 网易云抓取只使用 API 路径。
 - 歌曲匹配策略保持简单：按歌名搜索最多 30 个候选，再要求歌名相等且至少一个完整艺人名称相等；比较时统一大小写、全半角并忽略空白。

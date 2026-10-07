@@ -10,6 +10,9 @@ $version = $projectXml.Project.PropertyGroup.Version
 $zip = Join-Path $dist "NetEaseMusicImporter-$version.zip"
 
 dotnet publish $project -c Release
+if ($LASTEXITCODE -ne 0) {
+    throw 'dotnet publish failed.'
+}
 
 if (Test-Path $packageDir) {
     Remove-Item $packageDir -Recurse -Force

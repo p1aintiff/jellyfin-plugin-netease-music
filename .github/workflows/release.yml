@@ -1,13 +1,13 @@
-name: Build plugin repository
+name: Release plugin
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -16,119 +16,79 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+
+      - name: Validate release version
+        shell: pwsh
+        run: |
+          $project = [xml](Get-Content 'Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj')
+          $version = $project.Project.PropertyGroup.Version
+          $assemblyVersion = $project.Project.PropertyGroup.AssemblyVersion
+          $info = Get-Content 'manifest-info.json' | ConvertFrom-Json
+          $build = Get-Content 'build.yaml' -Raw
+          if ($env:GITHUB_REF_TYPE -ne 'tag' -or $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Run this workflow from tag v$version."
+          }
+          if ($assemblyVersion -ne "$version.0" -or $project.Project.PropertyGroup.FileVersion -ne $assemblyVersion -or
+              $build -notmatch "(?m)^version: `"$([regex]::Escape($assemblyVersion))`"\s*$" -or
+              -not $info.changelog.PSObject.Properties[$assemblyVersion]) {
+            throw 'Project version, build.yaml, and changelog must match.'
+          }
+
+      - name: Check published release
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $releases = gh api --paginate --slurp "repos/$env:GITHUB_REPOSITORY/releases" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not list releases.' }
+          $release = $releases | ForEach-Object { $_ } | Where-Object { $_.tag_name -eq $env:GITHUB_REF_NAME }
+          if ($release.draft) { throw 'An unfinished draft exists; complete or delete it before retrying.' }
+          "published=$([bool]$release)".ToLowerInvariant() >> $env:GITHUB_OUTPUT
 
       - uses: actions/setup-dotnet@v5
+        if: steps.existing.outputs.published != 'true'
         with:
           dotnet-version: 8.x
 
       - name: Build
+        if: steps.existing.outputs.published != 'true'
         run: dotnet build Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj -c Release
 
-      - name: Publish plugin repository
+      - name: Package plugin
+        if: steps.existing.outputs.published != 'true'
+        shell: pwsh
+        run: ./scripts/package-plugin.ps1
+
+      - name: Prepare plugin repository
+        if: steps.existing.outputs.published != 'true'
+        shell: pwsh
+        run: ./scripts/build-plugin-repository.ps1 -Repository $env:GITHUB_REPOSITORY -Tag $env:GITHUB_REF_NAME
+
+      - name: Publish GitHub Release
+        if: steps.existing.outputs.published != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $project = "Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj"
-          $projectXml = [xml](Get-Content $project)
-          $info = Get-Content "manifest-info.json" | ConvertFrom-Json
-          $version = $projectXml.Project.PropertyGroup.Version
-          $assemblyVersion = $projectXml.Project.PropertyGroup.AssemblyVersion
-          $targetAbi = "10.10.7.0"
-          $repoName = "${{ github.event.repository.name }}"
-          $owner = "${{ github.repository_owner }}"
-          $baseUrl = "https://$owner.github.io/$repoName"
-          $versions = @()
+          $packages = (Get-ChildItem 'dist/*.zip').FullName
+          gh release create $env:GITHUB_REF_NAME @packages 'site/manifest.json' --repo $env:GITHUB_REPOSITORY --verify-tag --draft --title "NetEase Music Importer $env:GITHUB_REF_NAME" --notes-file 'dist/release-notes.md'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create release.' }
+          gh release edit $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --draft=false
+          if ($LASTEXITCODE -ne 0) { throw 'Could not publish release.' }
 
-          function Get-Changelog($version, $fallback) {
-            $entry = $info.changelog.PSObject.Properties[$version]
-            if ($entry) {
-              return $entry.Value
-            }
-
-            return $fallback
-          }
-
-          function Get-PackageVersion($assemblyVersion) {
-            if ($assemblyVersion -match '^(\d+\.\d+\.\d+)\.0$') {
-              return $Matches[1]
-            }
-
-            return $assemblyVersion
-          }
-
-          function New-PackageVersion($sourceDir, $version, $assemblyVersion) {
-            $projectPath = Join-Path $sourceDir "Jellyfin.Plugin.NetEaseMusic/Jellyfin.Plugin.NetEaseMusic.csproj"
-            $publishOutput = dotnet publish $projectPath -c Release 2>&1
-            $publishOutput | ForEach-Object { Write-Host $_ }
-            if ($LASTEXITCODE -ne 0) {
-              throw "dotnet publish failed for $assemblyVersion"
-            }
-
-            $publish = Join-Path $sourceDir "Jellyfin.Plugin.NetEaseMusic/bin/Release/net8.0/publish"
-            $safeVersion = $version
-            $packageDir = "site/NetEaseMusicImporter-$safeVersion"
-            New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
-            Copy-Item "$publish/Jellyfin.Plugin.NetEaseMusic.dll" $packageDir
-            Copy-Item "$publish/Jellyfin.Plugin.NetEaseMusic.pdb" $packageDir
-            Copy-Item (Join-Path $sourceDir "build.yaml") $packageDir
-
-            $zipName = "NetEaseMusicImporter-$safeVersion.zip"
-            $zipPath = "site/$zipName"
-            Compress-Archive -Path "$packageDir/*" -DestinationPath $zipPath -Force
-            $checksum = (Get-FileHash $zipPath -Algorithm MD5).Hash.ToLowerInvariant()
-            $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-
-            return [ordered]@{
-              version = $assemblyVersion
-              changelog = Get-Changelog $assemblyVersion "Build $assemblyVersion."
-              targetAbi = $targetAbi
-              sourceUrl = "$baseUrl/$zipName"
-              checksum = $checksum
-              timestamp = $timestamp
-            }
-          }
-
-          New-Item -ItemType Directory -Force -Path "site" | Out-Null
-          $versions += New-PackageVersion "." $version $assemblyVersion
-
-          foreach ($entry in ($info.changelog.PSObject.Properties | Sort-Object { [version]$_.Name } -Descending)) {
-            if ($entry.Name -eq $assemblyVersion) {
-              continue
-            }
-
-            $tagVersion = Get-PackageVersion $entry.Name
-            $tag = "v$tagVersion"
-            $tagExists = git tag --list $tag
-            if (-not $tagExists) {
-              Write-Host "Skip $($entry.Name): tag $tag not found."
-              continue
-            }
-
-            $workDir = "history/$tagVersion"
-            New-Item -ItemType Directory -Force -Path $workDir | Out-Null
-            git archive $tag --format=tar | tar -x -C $workDir
-            $versions += New-PackageVersion $workDir $tagVersion $entry.Name
-          }
-
-          $manifest = @(
-            [ordered]@{
-              guid = $info.guid
-              name = $info.name
-              description = $info.description
-              overview = $info.overview
-              imageUrl = $info.imageUrl
-              owner = $owner
-              category = $info.category
-              versions = $versions
-            }
-          )
-
-          ConvertTo-Json -InputObject $manifest -Depth 8 | Set-Content "site/manifest.json"
+      - name: Restore published manifest
+        if: steps.existing.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release download $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --pattern 'manifest.json' --dir site
+          if ($LASTEXITCODE -ne 0) { throw 'Could not download published manifest.' }
 
       - uses: actions/configure-pages@v6
         with:
@@ -139,7 +99,7 @@ jobs:
           path: site
 
   deploy:
-    needs: build
+    needs: release
     runs-on: ubuntu-latest
     environment:
       name: github-pages
