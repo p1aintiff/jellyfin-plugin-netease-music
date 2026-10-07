@@ -1,101 +1,200 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>NetEase Music</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>网易云歌单导入</title>
     <style>
-        #NetEaseMusicPage .nem-shell { max-width: 980px; margin: 0 auto; }
-        #NetEaseMusicPage .nem-hero { position: relative; overflow: hidden; padding: 2.2em 2.4em; border-radius: 18px; background: linear-gradient(135deg, #3c235f, #7c3aed 55%, #db2777); color: #fff; box-shadow: 0 14px 35px rgba(56, 189, 248, .12); }
-        #NetEaseMusicPage .nem-hero:after { content: ''; position: absolute; width: 220px; height: 220px; right: -70px; top: -90px; border-radius: 50%; background: rgba(255,255,255,.12); }
-        #NetEaseMusicPage .nem-eyebrow { position: relative; z-index: 1; margin: 0 0 .45em; color: rgba(255,255,255,.78); font-size: .82em; letter-spacing: .12em; text-transform: uppercase; }
-        #NetEaseMusicPage .nem-hero h1 { position: relative; z-index: 1; margin: 0; font-size: 2em; }
-        #NetEaseMusicPage .nem-hero p { position: relative; z-index: 1; max-width: 620px; margin: .7em 0 0; color: rgba(255,255,255,.88); }
-        #NetEaseMusicPage .nem-card { margin-top: 1.4em; padding: 1.6em; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(30,30,35,.38); }
-        #NetEaseMusicPage .nem-card h2 { margin-top: 0; }
-        #NetEaseMusicPage .nem-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 1.2em; }
-        #NetEaseMusicPage .nem-form-grid .nem-wide { grid-column: 1 / -1; }
-        #NetEaseMusicPage .nem-options { display: flex; flex-wrap: wrap; gap: .7em 1.5em; margin: .5em 0 1.4em; }
-        #NetEaseMusicPage .nem-option { display: flex; align-items: center; gap: .45em; }
-        #NetEaseMusicPage .nem-submit { width: 100%; margin-top: .3em; }
-        #NetEaseMusicPage .nem-progress { height: 8px; overflow: hidden; border-radius: 99px; }
-        #NetEaseMusicPage .nem-status { margin: .8em 0 0; color: rgba(255,255,255,.75); }
-        #NetEaseMusicPage .nem-result-summary { margin: 0; font-size: 1.1em; font-weight: 600; }
-        #NetEaseMusicPage .nem-operation { color: rgba(255,255,255,.6); font-size: .85em; }
-        #NetEaseMusicPage .nem-history-empty { padding: 1.4em; border: 1px dashed rgba(255,255,255,.2); border-radius: 10px; text-align: center; color: rgba(255,255,255,.62); }
-        #NetEaseMusicPage .nem-history-row { display: flex; align-items: center; justify-content: space-between; gap: 1em; padding: 1em 0; border-bottom: 1px solid rgba(255,255,255,.1); }
-        #NetEaseMusicPage .nem-history-row:last-child { border-bottom: 0; }
+        #NetEaseMusicPage {
+            --nem-bg: #161e28;
+            --nem-border: #303c49;
+            --nem-text: #edf2f7;
+            --nem-muted: #a7b5c6;
+            --nem-accent: #80ddc2;
+            color: var(--nem-text);
+        }
+        #NetEaseMusicPage .nem-shell { max-width: 1160px; margin: 0 auto; padding-bottom: 3em; }
+        #NetEaseMusicPage .nem-hero { display: flex; align-items: center; gap: 1.2em; padding: 1.5em 0 1.8em; }
+        #NetEaseMusicPage .nem-logo { display: grid; place-items: center; flex-shrink: 0; width: 64px; height: 64px; border: 1px solid #40665f; border-radius: 20px; background: #203b38; color: var(--nem-accent); font-size: 2em; }
+        #NetEaseMusicPage .nem-eyebrow { margin: 0 0 .5em; color: var(--nem-accent); font-size: .75em; font-weight: 600; letter-spacing: .12em; }
+        #NetEaseMusicPage .nem-hero h1 { margin: 0; font-size: 1.9em; letter-spacing: .02em; }
+        #NetEaseMusicPage .nem-hero p:last-child { margin: .6em 0 0; color: var(--nem-muted); line-height: 1.6; }
+        #NetEaseMusicPage .nem-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 1.3em; align-items: start; }
+        #NetEaseMusicPage .nem-card { min-width: 0; padding: 1.6em; border: 1px solid var(--nem-border); border-radius: 16px; background: var(--nem-bg); }
+        #NetEaseMusicPage .nem-section { margin-top: 1.3em; }
+        #NetEaseMusicPage .nem-card-header { display: flex; align-items: center; justify-content: space-between; gap: 1em; margin-bottom: 1.4em; }
+        #NetEaseMusicPage .nem-heading { display: flex; align-items: center; gap: .7em; }
+        #NetEaseMusicPage .nem-heading h2 { margin: 0; font-size: 1.15em; }
+        #NetEaseMusicPage .nem-section-number { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: #253c3b; color: var(--nem-accent); font-size: .78em; font-weight: 700; }
+        #NetEaseMusicPage .nem-tag { padding: .35em .7em; border: 1px solid var(--nem-border); border-radius: 6px; color: var(--nem-muted); font-size: .75em; white-space: nowrap; }
+        #NetEaseMusicPage .nem-description { margin: -.4em 0 1.5em; color: var(--nem-muted); font-size: .9em; line-height: 1.7; }
+        #NetEaseMusicPage .inputContainer { margin-bottom: 1.5em; }
+        #NetEaseMusicPage .inputLabel { display: block; margin-bottom: .65em; color: var(--nem-text); font-size: .9em; }
+        #NetEaseMusicPage input[is="emby-input"] { box-sizing: border-box; width: 100%; padding: .85em 1em; border: 1px solid #43515f; border-radius: 8px; background: #101720; color: var(--nem-text); font: inherit; }
+        #NetEaseMusicPage input[is="emby-input"]::placeholder { color: #8b9aac; opacity: 1; }
+        #NetEaseMusicPage input[is="emby-input"]:focus { border-color: var(--nem-accent); outline: 2px solid #80ddc240; outline-offset: 2px; }
+        #NetEaseMusicPage .nem-help { margin: .6em 0 0; color: var(--nem-muted); font-size: .8em; line-height: 1.65; overflow-wrap: anywhere; }
+        #NetEaseMusicPage .nem-options { display: grid; grid-template-columns: 1fr 1fr; gap: .8em; margin: .2em 0 1.5em; }
+        #NetEaseMusicPage .nem-option { min-width: 0; padding: 1em; border: 1px solid var(--nem-border); border-radius: 10px; background: #1b2530; }
+        #NetEaseMusicPage .nem-option label { display: flex; align-items: center; gap: .6em; cursor: pointer; font-size: .9em; }
+        #NetEaseMusicPage .nem-option .emby-checkbox:checked + span + .checkboxOutline { background: var(--nem-accent); border-color: var(--nem-accent); }
+        #NetEaseMusicPage .nem-option .checkboxIcon { color: #102b26; }
+        #NetEaseMusicPage .nem-option .emby-checkbox:focus-visible + span + .checkboxOutline { outline: 2px solid var(--nem-accent); outline-offset: 3px; }
+        #NetEaseMusicPage .nem-option p { margin: .7em 0 0; color: var(--nem-muted); font-size: .78em; line-height: 1.6; }
+        #NetEaseMusicPage input[type="checkbox"] { accent-color: var(--nem-accent); }
+        #NetEaseMusicPage .nem-submit { display: flex; align-items: center; justify-content: center; gap: .7em; width: 100%; margin: 0; padding: .95em; border: 0; border-radius: 9px; background: var(--nem-accent); color: #102b26; font: inherit; font-weight: 700; cursor: pointer; }
+        #NetEaseMusicPage .nem-submit:hover { background: #a3ecd7; }
+        #NetEaseMusicPage button:disabled { opacity: .5; cursor: wait; }
+        #NetEaseMusicPage button:focus-visible, #NetEaseMusicPage a:focus-visible, #NetEaseMusicPage summary:focus-visible { outline: 2px solid var(--nem-accent); outline-offset: 3px; }
+        #NetEaseMusicPage .nem-submit-note { margin: .8em 0 0; color: var(--nem-muted); font-size: .75em; text-align: center; }
+        #NetEaseMusicPage .nem-guide { background: linear-gradient(145deg, #1e2d35, var(--nem-bg) 70%); }
+        #NetEaseMusicPage .nem-steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+        #NetEaseMusicPage .nem-steps li { position: relative; padding: 0 0 1.6em 2.6em; counter-increment: step; }
+        #NetEaseMusicPage .nem-steps li:before { content: counter(step); position: absolute; left: 0; top: -.15em; display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid #43565f; border-radius: 50%; color: var(--nem-accent); font-size: .78em; }
+        #NetEaseMusicPage .nem-steps li:not(:last-child):after { content: ''; position: absolute; left: 13px; top: 30px; bottom: 8px; width: 1px; background: var(--nem-border); }
+        #NetEaseMusicPage .nem-steps li:last-child { padding-bottom: 0; }
+        #NetEaseMusicPage .nem-steps strong { font-size: .9em; font-weight: 600; }
+        #NetEaseMusicPage .nem-steps p { margin: .5em 0 0; color: var(--nem-muted); font-size: .82em; line-height: 1.7; }
+        #NetEaseMusicPage .nem-note { margin-top: 1.6em; padding: 1em 1.1em; border-left: 3px solid var(--nem-accent); border-radius: 0 8px 8px 0; background: #233532; }
+        #NetEaseMusicPage .nem-note strong { color: #bbecde; font-size: .85em; }
+        #NetEaseMusicPage .nem-note p { margin: .5em 0 0; color: #bdd0ca; font-size: .8em; line-height: 1.7; }
+        #NetEaseMusicPage .nem-status-line { display: flex; align-items: center; gap: .65em; }
+        #NetEaseMusicPage .nem-status-dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--nem-accent); }
+        #NetEaseMusicPage .nem-status { margin: 0; font-size: .9em; line-height: 1.6; }
+        #NetEaseMusicPage .nem-progress { display: block; width: 100%; height: 6px; margin: 1em 0; border: 0; border-radius: 99px; accent-color: var(--nem-accent); overflow: hidden; }
+        #NetEaseMusicPage .nem-progress::-webkit-progress-bar { background: #2d3b46; border-radius: 99px; }
+        #NetEaseMusicPage .nem-progress::-webkit-progress-value { background: var(--nem-accent); border-radius: 99px; }
+        #NetEaseMusicPage .nem-progress:indeterminate { background: linear-gradient(90deg, #2d3b46 25%, var(--nem-accent) 50%, #2d3b46 75%); background-size: 200% 100%; animation: nem-loading 1.5s linear infinite; }
+        #NetEaseMusicPage .nem-progress:indeterminate::-webkit-progress-bar { background: transparent; }
+        #NetEaseMusicPage .nem-result { margin-top: 1.3em; padding-top: 1.2em; border-top: 1px solid var(--nem-border); }
+        #NetEaseMusicPage .nem-result-summary { margin: 0 0 1em; line-height: 1.6; font-weight: 600; overflow-wrap: anywhere; }
+        #NetEaseMusicPage .nem-error .nem-result-summary { color: #ffb6b6; }
+        #NetEaseMusicPage .nem-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8em; }
+        #NetEaseMusicPage .nem-metric { padding: 1em; border-radius: 9px; background: #202c38; }
+        #NetEaseMusicPage .nem-metric span { display: block; margin-bottom: .5em; color: var(--nem-muted); font-size: .8em; }
+        #NetEaseMusicPage .nem-metric strong { font-size: 1.7em; }
+        #NetEaseMusicPage .nem-matched strong { color: var(--nem-accent); }
+        #NetEaseMusicPage .nem-unmatched strong { color: #efd093; }
+        #NetEaseMusicPage .nem-operation { margin: 1em 0 0; color: var(--nem-muted); font-size: .75em; overflow-wrap: anywhere; }
+        #NetEaseMusicPage .nem-unmatched-list { margin-top: 1.1em; padding: 1em; border: 1px solid var(--nem-border); border-radius: 9px; }
+        #NetEaseMusicPage .nem-unmatched-list summary { cursor: pointer; color: #efd093; font-size: .85em; }
+        #NetEaseMusicPage .nem-unmatched-list ul { margin-bottom: 0; padding-left: 1.5em; color: var(--nem-muted); font-size: .85em; line-height: 1.9; overflow-wrap: anywhere; }
+        #NetEaseMusicPage .nem-history-count { margin-left: .7em; color: var(--nem-muted); font-size: .8em; }
+        #NetEaseMusicPage .nem-secondary { margin: 0; padding: .65em 1em; border: 1px solid #43515f; border-radius: 7px; background: #24313e; color: var(--nem-text); font: inherit; font-size: .82em; cursor: pointer; box-shadow: none; }
+        #NetEaseMusicPage .nem-secondary:hover { background: #314352; }
+        #NetEaseMusicPage .nem-history-empty { padding: 2em 1em; border: 1px dashed #43515f; border-radius: 10px; text-align: center; }
+        #NetEaseMusicPage .nem-history-empty strong { display: block; font-size: .95em; font-weight: 500; }
+        #NetEaseMusicPage .nem-history-empty p { margin: .6em 0 0; color: var(--nem-muted); font-size: .82em; line-height: 1.7; }
+        #NetEaseMusicPage .nem-history-row { display: flex; align-items: center; justify-content: space-between; gap: 1.2em; padding: 1.1em 0; border-bottom: 1px solid var(--nem-border); }
+        #NetEaseMusicPage .nem-history-row:last-child { border-bottom: 0; padding-bottom: 0; }
         #NetEaseMusicPage .nem-history-info { min-width: 0; flex: 1; }
-        #NetEaseMusicPage .nem-history-name { margin-bottom: .3em; font-weight: 600; }
-        #NetEaseMusicPage .nem-history-url { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,255,255,.62); font-size: .88em; }
-        #NetEaseMusicPage .nem-history-actions { display: flex; flex-shrink: 0; gap: .5em; }
-        #NetEaseMusicPage .nem-danger { --button-background: rgba(190, 55, 75, .18); }
-        @media (max-width: 650px) { #NetEaseMusicPage .nem-hero { padding: 1.6em; } #NetEaseMusicPage .nem-form-grid { display: block; } #NetEaseMusicPage .nem-history-row { align-items: stretch; flex-direction: column; } #NetEaseMusicPage .nem-history-actions button { flex: 1; } }
+        #NetEaseMusicPage .nem-history-name { margin-bottom: .45em; font-weight: 600; overflow-wrap: anywhere; }
+        #NetEaseMusicPage .nem-history-url { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--nem-muted); font-size: .8em; text-decoration: none; }
+        #NetEaseMusicPage .nem-history-url:hover { color: var(--nem-accent); text-decoration: underline; }
+        #NetEaseMusicPage .nem-history-actions { display: flex; flex-shrink: 0; gap: .65em; }
+        #NetEaseMusicPage .nem-danger { background: transparent; border-color: #66474e; color: #f4b4bc; }
+        #NetEaseMusicPage .nem-danger:hover { background: #3e2932; }
+        #NetEaseMusicPage .hide { display: none !important; }
+        @keyframes nem-loading { to { background-position: -200% 0; } }
+        @media (prefers-reduced-motion: reduce) { #NetEaseMusicPage .nem-progress:indeterminate { animation: none; } }
+        @media (max-width: 900px) { #NetEaseMusicPage .nem-layout { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) {
+            #NetEaseMusicPage .nem-hero { gap: .85em; padding-top: 1em; align-items: flex-start; }
+            #NetEaseMusicPage .nem-logo { width: 46px; height: 46px; border-radius: 14px; font-size: 1.6em; }
+            #NetEaseMusicPage .nem-hero h1 { font-size: 1.45em; }
+            #NetEaseMusicPage .nem-hero p:last-child { font-size: .85em; }
+            #NetEaseMusicPage .nem-card { padding: 1.15em; border-radius: 12px; }
+            #NetEaseMusicPage .nem-card-header { gap: .6em; }
+            #NetEaseMusicPage .nem-tag { display: none; }
+            #NetEaseMusicPage .nem-options { grid-template-columns: 1fr; }
+            #NetEaseMusicPage .nem-metrics { gap: .5em; }
+            #NetEaseMusicPage .nem-metric { padding: .8em .6em; }
+            #NetEaseMusicPage .nem-history-row { align-items: stretch; flex-direction: column; }
+            #NetEaseMusicPage .nem-history-actions button { flex: 1; }
+        }
     </style>
 </head>
 <body>
     <div id="NetEaseMusicPage" data-role="page" class="page type-interior pluginConfigurationPage">
         <div data-role="content">
             <div class="content-primary nem-shell">
-                <section class="nem-hero">
-                    <p class="nem-eyebrow">Jellyfin plugin · v0.2.2</p>
-                    <h1>NetEase Music Importer</h1>
-                    <p>Bring your favorite NetEase Cloud Music playlists into your Jellyfin library in a few clicks.</p>
-                </section>
-                <form id="NetEaseMusicImportForm">
-                    <div class="verticalSection nem-card">
-                        <h2>Import a playlist</h2>
-                        <p>Paste a public NetEase playlist link to get started.</p>
-                        <div class="nem-form-grid">
-                        <div class="inputContainer nem-wide">
-                            <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="NetEase playlist URL" />
+                <header class="nem-hero">
+                    <div class="nem-logo" aria-hidden="true">♫</div>
+                    <div>
+                        <p class="nem-eyebrow">NETEASE MUSIC / JELLYFIN</p>
+                        <h1>把喜欢的歌单，带回音乐库</h1>
+                        <p>从网易云音乐导入歌单，在 Jellyfin 中聆听已收藏的本地音乐。</p>
+                    </div>
+                </header>
+
+                <div class="nem-layout">
+                    <form id="NetEaseMusicImportForm" class="nem-card" aria-labelledby="importHeading">
+                        <div class="nem-card-header">
+                            <div class="nem-heading"><span class="nem-section-number" aria-hidden="true">01</span><h2 id="importHeading">导入歌单</h2></div>
+                            <span class="nem-tag">网易云 → Jellyfin</span>
+                        </div>
+                        <p class="nem-description">粘贴歌单链接，插件将自动匹配音乐库中的歌曲并创建新歌单。</p>
+                        <div class="inputContainer">
+                            <input is="emby-input" id="playlistUrl" name="playlistUrl" type="url" required label="网易云歌单链接" placeholder="https://music.163.com/playlist?id=…" aria-describedby="playlistUrlHelp" />
+                            <p id="playlistUrlHelp" class="nem-help">打开网易云歌单，复制分享链接。支持包含歌单 ID 的 music.163.com 链接。</p>
                         </div>
                         <div class="inputContainer">
-                            <input is="emby-input" id="playlistName" name="playlistName" type="text" label="Jellyfin playlist name" />
-                        </div>
+                            <input is="emby-input" id="playlistName" name="playlistName" type="text" label="Jellyfin 歌单名称（可选）" placeholder="留空则使用网易云歌单名称" aria-describedby="playlistNameHelp" />
+                            <p id="playlistNameHelp" class="nem-help">为新歌单起一个熟悉的名字，方便在 Jellyfin 中查找。</p>
                         </div>
                         <div class="nem-options">
-                        <div class="checkboxContainer nem-option">
-                            <label>
-                                <input is="emby-checkbox" id="playlistPublic" type="checkbox" checked />
-                                <span>Public playlist</span>
-                            </label>
+                            <div class="nem-option">
+                                <label><input is="emby-checkbox" id="playlistPublic" type="checkbox" checked aria-describedby="playlistPublicHelp" /><span>公开歌单</span></label>
+                                <p id="playlistPublicHelp">允许其他 Jellyfin 用户访问此歌单。</p>
+                            </div>
+                            <div class="nem-option">
+                                <label><input is="emby-checkbox" id="saveCache" type="checkbox" checked aria-describedby="saveCacheHelp" /><span>保存导入历史</span></label>
+                                <p id="saveCacheHelp">记录来源链接，方便以后同步更新歌单。</p>
+                            </div>
                         </div>
-                        <div class="checkboxContainer nem-option">
-                            <label>
-                                <input is="emby-checkbox" id="saveCache" type="checkbox" checked />
-                                <span>Save import history</span>
-                            </label>
+                        <button is="emby-button" type="submit" class="raised button-submit block nem-submit"><span>开始导入</span><span aria-hidden="true">→</span></button>
+                        <p class="nem-submit-note">每次导入都会创建一个新的 Jellyfin 歌单。</p>
+                    </form>
+
+                    <aside class="nem-card nem-guide" aria-labelledby="guideHeading">
+                        <div class="nem-card-header"><div class="nem-heading"><h2 id="guideHeading">从链接到歌单，只需三步</h2></div></div>
+                        <ol class="nem-steps">
+                            <li><strong>准备本地音乐</strong><p>先将音乐加入 Jellyfin 音乐库并完成扫描，尽量补全歌名和艺人信息。</p></li>
+                            <li><strong>粘贴网易云歌单链接</strong><p>填写左侧表单，选择歌单可见性及是否保存历史，然后开始导入。</p></li>
+                            <li><strong>查看匹配结果</strong><p>匹配成功的歌曲会加入新歌单；未匹配的歌曲可在结果中查看。</p></li>
+                        </ol>
+                        <div class="nem-note"><strong>导入的是歌单，不会下载歌曲</strong><p>插件按歌名和艺人匹配本地音乐。缺少音源或歌曲信息不一致时，对应歌曲可能无法匹配。</p></div>
+                    </aside>
+                </div>
+
+                <section id="NetEaseMusicProgress" class="nem-card nem-section" aria-labelledby="statusHeading">
+                    <div class="nem-card-header"><div class="nem-heading"><span class="nem-section-number" aria-hidden="true">02</span><h2 id="statusHeading">任务状态与结果</h2></div><span class="nem-tag">本次操作</span></div>
+                    <div class="nem-status-line" role="status" aria-live="polite"><span class="nem-status-dot" aria-hidden="true"></span><p id="importStatus" class="nem-status">准备就绪，等待导入歌单。</p></div>
+                    <progress id="importProgress" class="nem-progress hide" max="100" value="0" aria-label="歌单导入进度"></progress>
+                    <p class="nem-help">导入或更新期间请保持页面打开。完成后，这里会显示实际匹配结果。</p>
+                    <div id="NetEaseMusicResult" class="nem-result hide" role="status" aria-live="polite">
+                        <p id="importSummary" class="nem-result-summary"></p>
+                        <div id="importMetrics" class="nem-metrics hide">
+                            <div class="nem-metric"><span>歌单歌曲</span><strong id="totalCount">0</strong></div>
+                            <div class="nem-metric nem-matched"><span>匹配成功</span><strong id="matchedCount">0</strong></div>
+                            <div class="nem-metric nem-unmatched"><span>未匹配</span><strong id="unmatchedCount">0</strong></div>
                         </div>
-                        </div>
-                        <button is="emby-button" type="submit" class="raised button-submit block nem-submit">
-                            <span>Import playlist</span>
-                        </button>
+                        <div id="unmatchedSongs"></div>
+                        <p id="operationId" class="nem-operation"></p>
                     </div>
-                </form>
+                </section>
 
-                <div id="NetEaseMusicProgress" class="verticalSection nem-card hide">
-                    <h2>Status</h2>
-                    <progress id="importProgress" class="nem-progress" max="100" value="0" style="width:100%"></progress>
-                    <p id="importStatus" class="nem-status"></p>
-                </div>
-
-                <div id="NetEaseMusicResult" class="verticalSection nem-card hide">
-                    <h2>Result</h2>
-                    <p id="importSummary" class="nem-result-summary"></p>
-                    <p id="operationId" class="nem-operation"></p>
-                    <div id="unmatchedSongs"></div>
-                </div>
-
-                <div id="NetEaseMusicImports" class="verticalSection nem-card">
-                    <h2>Import history</h2>
-                    <div id="importHistory"></div>
-                </div>
+                <section id="NetEaseMusicImports" class="nem-card nem-section" aria-labelledby="historyHeading">
+                    <div class="nem-card-header"><div class="nem-heading"><span class="nem-section-number" aria-hidden="true">03</span><h2 id="historyHeading">导入历史<span id="historyCount" class="nem-history-count"></span></h2></div><button is="emby-button" id="reloadImports" type="button" class="nem-secondary">刷新列表</button></div>
+                    <p class="nem-description">更新歌单会按网易云当前内容重新匹配，并替换 Jellyfin 歌单中的歌曲。删除记录只清除导入历史，已创建的歌单会保留。</p>
+                    <div id="importHistory" aria-live="polite"><p class="nem-help">正在加载导入历史…</p></div>
+                </section>
             </div>
         </div>
         <script>
+
             (function () {
                 var page = document.getElementById('NetEaseMusicPage');
                 var form = page.querySelector('#NetEaseMusicImportForm');
-                var progressSection = page.querySelector('#NetEaseMusicProgress');
                 var progress = page.querySelector('#importProgress');
                 var status = page.querySelector('#importStatus');
                 var result = page.querySelector('#NetEaseMusicResult');
@@ -161,29 +260,42 @@
                     });
                 }
 
-                function setProgress(value, text) {
-                    progress.value = value;
+                function setProgress(text, busy) {
                     status.textContent = text;
-                    progressSection.classList.remove('hide');
+                    progress.classList.toggle('hide', !busy);
+                    if (busy) {
+                        progress.removeAttribute('value');
+                        result.classList.add('hide');
+                    }
                 }
 
                 function showResult(text, operationId, songs) {
                     summary.textContent = text;
-                    operation.textContent = operationId ? 'OperationId: ' + operationId : '';
+                    operation.textContent = operationId ? '操作编号：' + operationId + ' · 排查问题时可用于查找服务端日志。' : '';
+                    operation.classList.toggle('hide', !operationId);
+                    page.querySelector('#importMetrics').classList.add('hide');
+                    result.classList.remove('nem-error');
                     unmatched.innerHTML = '';
 
                     if (songs && songs.length) {
-                        var title = document.createElement('h3');
-                        title.textContent = 'Unmatched songs';
-                        unmatched.appendChild(title);
+                        var details = document.createElement('details');
+                        details.className = 'nem-unmatched-list';
+                        var title = document.createElement('summary');
+                        title.textContent = '查看未匹配的歌曲（' + songs.length + ' 首）';
+                        details.appendChild(title);
 
+                        var help = document.createElement('p');
+                        help.className = 'nem-help';
+                        help.textContent = '请检查本地音乐库是否有对应歌曲，以及歌名、艺人信息是否一致。' + (songs.length > 20 ? '这里只显示前 20 首。' : '');
+                        details.appendChild(help);
                         var list = document.createElement('ul');
                         songs.slice(0, 20).forEach(function (song) {
                             var item = document.createElement('li');
-                            item.textContent = (song.Name || song.name || '') + ' - ' + (song.Artist || song.artist || '');
+                            item.textContent = (song.Name || song.name || '') + ' — ' + (song.Artist || song.artist || '');
                             list.appendChild(item);
                         });
-                        unmatched.appendChild(list);
+                        details.appendChild(list);
+                        unmatched.appendChild(details);
                     }
 
                     result.classList.remove('hide');
@@ -191,10 +303,16 @@
 
                 function renderImports(items) {
                     importHistory.innerHTML = '';
+                    page.querySelector('#historyCount').textContent = (items ? items.length : 0) + ' 条';
                     if (!items || !items.length) {
                         var empty = document.createElement('div');
                         empty.className = 'nem-history-empty';
-                        empty.textContent = 'No import history yet. Your saved imports will appear here.';
+                        var title = document.createElement('strong');
+                        title.textContent = '还没有导入记录';
+                        var help = document.createElement('p');
+                        help.textContent = '勾选“保存导入历史”并导入歌单后，即可在这里更新歌单或管理记录。';
+                        empty.appendChild(title);
+                        empty.appendChild(help);
                         importHistory.appendChild(empty);
                         return;
                     }
@@ -202,7 +320,9 @@
                     items.forEach(function (item) {
                         var playlistId = item.JellyfinPlaylistId || item.jellyfinPlaylistId || '';
                         var neteaseUrl = item.NetEaseUrl || item.netEaseUrl || '';
-                        var playlistName = item.PlaylistName || item.playlistName || 'Playlist not found';
+                        var playlistName = item.PlaylistName || item.playlistName || '歌单不存在';
+
+                        if (playlistName === 'Playlist not found') playlistName = '歌单不存在';
 
                         var row = document.createElement('div');
                         row.className = 'nem-history-row';
@@ -230,22 +350,23 @@
 
                         var update = document.createElement('button');
                         update.setAttribute('is', 'emby-button');
-                        update.className = 'raised';
+                        update.className = 'nem-secondary';
                         update.type = 'button';
-                        update.textContent = 'Update';
+                        update.textContent = '更新歌单';
+                        update.setAttribute('aria-label', '更新歌单：' + playlistName);
+                        update.title = '按网易云当前内容重新匹配，并替换此歌单中的歌曲';
                         update.addEventListener('click', function () {
                             update.disabled = true;
-                            setProgress(25, 'Fetching playlist');
+                            setProgress('正在获取网易云歌单并匹配本地音乐…', true);
                             ajax({
                                 type: 'POST',
                                 url: ApiClient.getUrl('NetEaseMusic/Imports/' + encodeURIComponent(playlistId) + '/Refresh')
                             }).then(function (importResult) {
-                                setProgress(90, 'Syncing playlist');
                                 showImportResult(importResult);
-                                setProgress(100, 'Complete');
+                                setProgress('操作完成，匹配结果如下。', false);
                             }).catch(function (error) {
                                 showError(error);
-                                setProgress(100, 'Failed');
+                                setProgress('操作失败，请查看下方错误信息。', false);
                             }).finally(function () {
                                 update.disabled = false;
                             });
@@ -254,15 +375,20 @@
 
                         var remove = document.createElement('button');
                         remove.setAttribute('is', 'emby-button');
-                        remove.className = 'raised nem-danger';
+                        remove.className = 'nem-secondary nem-danger';
                         remove.type = 'button';
-                        remove.textContent = 'Delete cache';
+                        remove.textContent = '删除记录';
+                        remove.setAttribute('aria-label', '删除导入记录：' + playlistName);
+                        remove.title = '只删除导入记录，保留 Jellyfin 歌单';
                         remove.addEventListener('click', function () {
                             remove.disabled = true;
                             ApiClient.ajax({
                                 type: 'DELETE',
                                 url: ApiClient.getUrl('NetEaseMusic/Imports/' + encodeURIComponent(playlistId))
-                            }).then(loadImports).finally(function () {
+                            }).then(loadImports).catch(function (error) {
+                                showError(error);
+                                setProgress('删除记录失败，请查看下方错误信息。', false);
+                            }).finally(function () {
                                 remove.disabled = false;
                             });
                         });
@@ -274,31 +400,41 @@
                 }
 
                 function loadImports() {
-                    ajax({
+                    var reload = page.querySelector('#reloadImports');
+                    reload.disabled = true;
+                    return ajax({
                         type: 'GET',
                         url: ApiClient.getUrl('NetEaseMusic/Imports')
                     }).then(renderImports).catch(function () {
-                        importHistory.textContent = 'Failed to load import history.';
+                        page.querySelector('#historyCount').textContent = '';
+                        importHistory.textContent = '导入历史加载失败，请点击“刷新列表”重试。';
+                    }).finally(function () {
+                        reload.disabled = false;
                     });
                 }
 
                 function showImportResult(importResult) {
-                    var playlistName = pick(importResult, ['PlaylistName', 'playlistName']) || 'Imported playlist';
+                    var playlistName = pick(importResult, ['PlaylistName', 'playlistName']) || '已导入的歌单';
                     var matchedCount = pick(importResult, ['MatchedCount', 'matchedCount']) || 0;
                     var totalCount = pick(importResult, ['TotalCount', 'totalCount']) || 0;
                     var unmatchedCount = pick(importResult, ['UnmatchedCount', 'unmatchedCount']) || 0;
                     var operationId = pick(importResult, ['OperationId', 'operationId']);
                     var unmatchedSongs = pick(importResult, ['UnmatchedSongs', 'unmatchedSongs']) || [];
                     showResult(
-                        playlistName + ': ' + matchedCount + '/' + totalCount + ' matched, ' + unmatchedCount + ' unmatched.',
+                        '「' + playlistName + '」已完成，共匹配 ' + matchedCount + ' 首歌曲。',
                         operationId,
                         unmatchedSongs
                     );
+                    page.querySelector('#totalCount').textContent = totalCount;
+                    page.querySelector('#matchedCount').textContent = matchedCount;
+                    page.querySelector('#unmatchedCount').textContent = unmatchedCount;
+                    page.querySelector('#importMetrics').classList.remove('hide');
                 }
 
                 function showError(error) {
                     var body = asObject(error && (error.responseJSON || error.responseText)) || {};
-                    showResult(body.error || 'Import failed.', body.operationId, null);
+                    showResult(pick(body, ['error', 'Error']) || '操作失败，请检查歌单链接和服务端连接后重试。', pick(body, ['operationId', 'OperationId']), null);
+                    result.classList.add('nem-error');
                 }
 
                 form.addEventListener('submit', function (event) {
@@ -314,12 +450,8 @@
 
                     button.disabled = true;
                     result.classList.add('hide');
-                    setProgress(25, 'Fetching playlist');
+                    setProgress('正在获取网易云歌单并匹配本地音乐…', true);
                     Dashboard.showLoadingMsg();
-
-                    window.setTimeout(function () {
-                        if (button.disabled) setProgress(65, 'Matching songs');
-                    }, 800);
 
                     ajax({
                         type: 'POST',
@@ -327,18 +459,18 @@
                         data: JSON.stringify(body),
                         contentType: 'application/json'
                     }).then(function (importResult) {
-                        setProgress(90, 'Creating playlist');
                         showImportResult(importResult);
-                        setProgress(100, 'Complete');
+                        setProgress('操作完成，匹配结果如下。', false);
                         loadImports();
                     }).catch(function (error) {
                         showError(error);
-                        setProgress(100, 'Failed');
+                        setProgress('操作失败，请查看下方错误信息。', false);
                     }).finally(function () {
                         button.disabled = false;
                         Dashboard.hideLoadingMsg();
                     });
                 });
+                page.querySelector('#reloadImports').addEventListener('click', loadImports);
                 loadImports();
             })();
         </script>
