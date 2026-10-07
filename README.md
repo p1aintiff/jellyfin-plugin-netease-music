@@ -34,7 +34,7 @@ https://p1aintiff.github.io/jellyfin-plugin-netease-music/manifest.json
 powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 ```
 
-从 [GitHub Releases](https://github.com/p1aintiff/jellyfin-plugin-netease-music/releases) 下载插件包，或使用本地构建的 `dist\NetEaseMusicImporter-0.2.3.zip`，解压到 Jellyfin 插件目录。
+从 [GitHub Releases](https://github.com/p1aintiff/jellyfin-plugin-netease-music/releases) 下载插件包，或使用本地构建的 `dist\NetEaseMusicImporter-0.2.4.zip`，解压到 Jellyfin 插件目录。
 
 Windows：
 
@@ -139,7 +139,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 
 仓库已配置 GitHub Actions：
 
-- 推送 `v版本号` 标签（如 `v0.2.3`）会构建插件并创建 GitHub Release。
+- 推送 `v版本号` 标签（如 `v0.2.4`）会构建插件并创建 GitHub Release。
 - Release 保存插件 ZIP、版本说明和插件目录快照 `manifest.json`；GitHub Pages 只托管在线安装目录。
 - 普通 `main` 提交不再发布，避免相同版本号对应不同安装包。
 - 需要重试时，在 `Actions` -> `Release plugin` -> `Run workflow` 中选择对应版本标签。已发布的 Release 会直接复用目录快照，不会重新构建或覆盖安装包。
@@ -157,15 +157,15 @@ https://p1aintiff.github.io/jellyfin-plugin-netease-music/manifest.json
 - 提交并推送 `main` 后，创建与项目版本一致的标签并推送：
 
 ```powershell
-git tag v0.2.3
-git push origin v0.2.3
+git tag v0.2.4
+git push origin v0.2.4
 ```
 
 - GitHub Actions 会校验版本一致性；新目录沿用已发布历史版本的下载地址，不会重新构建历史安装包。
 
 ## 说明
 
-- 当前版本：`0.2.3`
+- 当前版本：`0.2.4`
 - 目标 Jellyfin ABI：`10.10.7.0`
 - 网易云抓取只使用 API 路径。
 - 歌曲匹配策略保持简单：按歌名搜索最多 30 个候选，再要求歌名相等且至少一个完整艺人名称相等；比较时统一大小写、全半角并忽略空白。
