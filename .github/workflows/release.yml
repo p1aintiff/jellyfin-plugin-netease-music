@@ -8,11 +8,9 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: release
   cancel-in-progress: false
 
 jobs:
@@ -49,6 +47,9 @@ jobs:
           $release = $releases | ForEach-Object { $_ } | Where-Object { $_.tag_name -eq $env:GITHUB_REF_NAME }
           if ($release.draft) { throw 'An unfinished draft exists; complete or delete it before retrying.' }
           "published=$([bool]$release)".ToLowerInvariant() >> $env:GITHUB_OUTPUT
+          $previous = $releases | ForEach-Object { $_ } | Where-Object { -not $_.draft -and -not $_.prerelease } | Select-Object -First 1
+          $manifestUrl = ($previous.assets | Where-Object name -eq 'manifest.json').browser_download_url
+          "manifest_url=$manifestUrl" >> $env:GITHUB_OUTPUT
 
       - uses: actions/setup-dotnet@v5
         if: steps.existing.outputs.published != 'true'
@@ -66,8 +67,10 @@ jobs:
 
       - name: Prepare plugin repository
         if: steps.existing.outputs.published != 'true'
+        env:
+          PREVIOUS_MANIFEST_URL: ${{ steps.existing.outputs.manifest_url }}
         shell: pwsh
-        run: ./scripts/build-plugin-repository.ps1 -Repository $env:GITHUB_REPOSITORY -Tag $env:GITHUB_REF_NAME
+        run: ./scripts/build-plugin-repository.ps1 -Repository $env:GITHUB_REPOSITORY -Tag $env:GITHUB_REF_NAME -PreviousManifestUrl $env:PREVIOUS_MANIFEST_URL
 
       - name: Publish GitHub Release
         if: steps.existing.outputs.published != 'true'
@@ -80,30 +83,3 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Could not create release.' }
           gh release edit $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --draft=false
           if ($LASTEXITCODE -ne 0) { throw 'Could not publish release.' }
-
-      - name: Restore published manifest
-        if: steps.existing.outputs.published == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: pwsh
-        run: |
-          gh release download $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --pattern 'manifest.json' --dir site
-          if ($LASTEXITCODE -ne 0) { throw 'Could not download published manifest.' }
-
-      - uses: actions/configure-pages@v6
-        with:
-          enablement: true
-
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: site
-
-  deploy:
-    needs: release
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5

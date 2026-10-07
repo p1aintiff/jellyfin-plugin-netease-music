@@ -141,8 +141,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package-plugin.ps1
 
 - 推送 `v版本号` 标签（如 `v0.2.4`）会构建插件并创建 GitHub Release。
 - Release 保存插件 ZIP、版本说明和插件目录快照 `manifest.json`；GitHub Pages 只托管在线安装目录。
+- Release 流程成功后，`Publish plugin repository` 流程从最新 Release 读取目录快照，再通过 `main` 部署 Pages，兼容仅允许 `main` 部署的环境规则。修改 Pages 工作流也会同步目录。
 - 普通 `main` 提交不再发布，避免相同版本号对应不同安装包。
-- 需要重试时，在 `Actions` -> `Release plugin` -> `Run workflow` 中选择对应版本标签。已发布的 Release 会直接复用目录快照，不会重新构建或覆盖安装包。
+- Release 需要重试时，在 `Actions` -> `Release plugin` -> `Run workflow` 中选择对应版本标签。已发布的 Release 不会重新构建或覆盖安装包。
+- Pages 需要重试时，在 `Actions` -> `Publish plugin repository` -> `Run workflow` 中选择 `main`，只重新部署最新 Release 的目录快照。
 - 首次切换发布方式时，将现有 Pages 历史安装包原样迁移到该次 Release 附件中，保留历史版本和校验值。
 - Jellyfin 在线安装地址为：
 
